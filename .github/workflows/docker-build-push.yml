@@ -5,9 +5,8 @@ on:
     branches: [ main ]
     paths-ignore:
       - '.env'
-      - 'compose.yml'
-      - 'dev-compose.yml'
-      - 'pg-compose.yml'
+      - 'docker-compose.yml'
+      - 'docker-compose-dev.yml'
       - 'README.md'
       - '.gitignore'
 
