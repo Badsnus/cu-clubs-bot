@@ -1,12 +1,15 @@
 services:
   bot:
     container_name: bot
-    build: ./bot
+    image: ${REGISTRY_URL}/${GITHUB_REPOSITORY}:${TAG:-main}
     depends_on:
       - redis
     volumes:
       - ./logs:/opt/logs
     restart: always
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
+      - "com.centurylinklabs.watchtower.monitor-only=false"
 
   redis:
     container_name: redis
@@ -17,6 +20,18 @@ services:
     volumes:
       - redis-data:/data
     restart: always
+    labels:
+      - "com.centurylinklabs.watchtower.enable=false"
+
+
+  watchtower:
+    image: containrrr/watchtower
+    labels:
+      - "com.centurylinklabs.watchtower.enable=false"
+    command: -i 60
+    volumes:
+      - /home/ubuntu/.docker/config.json:/config.json
+      - /var/run/docker.sock:/var/run/docker.sock
 
 volumes:
   redis-data:
