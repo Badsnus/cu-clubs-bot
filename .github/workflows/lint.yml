@@ -1,9 +1,6 @@
 name: Go Lint and Format Check
 
 on:
-  push:
-    branches:
-      - main
   pull_request:
     branches:
       - main
