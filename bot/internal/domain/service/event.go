@@ -24,7 +24,7 @@ type EventStorage interface {
 		role string,
 		userID int64,
 	) ([]dto.Event, error)
-	GetByClubID(ctx context.Context, limit, offset int, order string, clubID string) ([]entity.Event, error)
+	GetByClubID(ctx context.Context, limit, offset int, clubID string) ([]entity.Event, error)
 	CountByClubID(ctx context.Context, clubID string) (int64, error)
 	GetFutureByClubID(
 		ctx context.Context,
@@ -66,8 +66,8 @@ func (s *EventService) GetAll(ctx context.Context) ([]entity.Event, error) {
 	return s.eventStorage.GetAll(ctx)
 }
 
-func (s *EventService) GetByClubID(ctx context.Context, limit, offset int, order string, clubID string) ([]entity.Event, error) {
-	return s.eventStorage.GetByClubID(ctx, limit, offset, order, clubID)
+func (s *EventService) GetByClubID(ctx context.Context, limit, offset int, clubID string) ([]entity.Event, error) {
+	return s.eventStorage.GetByClubID(ctx, limit, offset, clubID)
 }
 
 func (s *EventService) CountByClubID(ctx context.Context, clubID string) (int64, error) {

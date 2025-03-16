@@ -52,14 +52,13 @@ func (s *EventStorage) GetAll(ctx context.Context) ([]entity.Event, error) {
 	return events, err
 }
 
-// GetByClubID is a function that gets events by club_id with pagination from the database.
-//
-// It returns events in the order of start_time (upcoming first, then past).
-// If there are more events than limit, it returns only first limit events.
-// If there are fewer events than limit, it returns all events.
-// If there are no events, it returns empty list.
+// GetByClubID is a function that gets events of a club from the database.
+// It returns events in the order of start_time (upcoming first [start_time ASC], then past [start_time DESC]).
+// If club has more events than limit, it returns only first limit events.
+// If club has fewer events than limit, it returns all events.
+// If club has no events, it returns empty list.
 // If error occurs during the process, it returns error.
-func (s *EventStorage) GetByClubID(ctx context.Context, limit, offset int, order string, clubID string) ([]entity.Event, error) {
+func (s *EventStorage) GetByClubID(ctx context.Context, limit, offset int, clubID string) ([]entity.Event, error) {
 	var events []entity.Event
 
 	currentTime := time.Now()
@@ -77,7 +76,7 @@ func (s *EventStorage) GetByClubID(ctx context.Context, limit, offset int, order
 	if offset < int(upcomingCount) {
 		if err := s.db.WithContext(ctx).
 			Where("club_id = ? AND start_time > ?", clubID, currentTime).
-			Order(order).
+			Order("start_time asc").
 			Limit(limit).
 			Offset(offset).
 			Find(&events).Error; err != nil {
@@ -92,7 +91,7 @@ func (s *EventStorage) GetByClubID(ctx context.Context, limit, offset int, order
 		var pastEvents []entity.Event
 		if err := s.db.WithContext(ctx).
 			Where("club_id = ? AND start_time <= ?", clubID, currentTime).
-			Order(order).
+			Order("start_time desc").
 			Limit(remainingLimit).
 			Offset(pastOffset).
 			Find(&pastEvents).Error; err != nil {
