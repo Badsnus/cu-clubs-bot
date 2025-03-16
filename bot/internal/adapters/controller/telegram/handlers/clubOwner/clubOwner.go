@@ -55,7 +55,7 @@ type eventService interface {
 	Create(ctx context.Context, event *entity.Event) (*entity.Event, error)
 	Update(ctx context.Context, event *entity.Event) (*entity.Event, error)
 	Get(ctx context.Context, id string) (*entity.Event, error)
-	GetByClubID(ctx context.Context, limit, offset int, order string, clubID string) ([]entity.Event, error)
+	GetByClubID(ctx context.Context, limit, offset int, clubID string) ([]entity.Event, error)
 	CountByClubID(ctx context.Context, clubID string) (int64, error)
 	Delete(ctx context.Context, id string) error
 }
@@ -1442,7 +1442,7 @@ func (h Handler) eventsList(c tele.Context) error {
 		nextPage    int
 		err         error
 		eventsCount int64
-		events      []entity.Event
+		e           []entity.Event
 		rows        []tele.Row
 		menuRow     tele.Row
 	)
@@ -1465,11 +1465,10 @@ func (h Handler) eventsList(c tele.Context) error {
 		)
 	}
 
-	events, err = h.eventService.GetByClubID(
+	e, err = h.eventService.GetByClubID(
 		context.Background(),
 		eventsOnPage,
 		p*eventsOnPage,
-		"start_time ASC",
 		clubID,
 	)
 	if err != nil {
@@ -1485,7 +1484,7 @@ func (h Handler) eventsList(c tele.Context) error {
 	}
 
 	markup := c.Bot().NewMarkup()
-	for _, event := range events {
+	for _, event := range e {
 		rows = append(rows, markup.Row(*h.layout.Button(c, "clubOwner:events:event", struct {
 			ID     string
 			Page   int
