@@ -47,6 +47,7 @@ type EventParticipant struct {
 	EventID   string `gorm:"primaryKey;type:uuid"`
 	UserID    int64  `gorm:"primaryKey"`
 	CreatedAt time.Time
+	UpdatedAt time.Time
 	IsUserQr  bool
 	IsEventQr bool
 }
