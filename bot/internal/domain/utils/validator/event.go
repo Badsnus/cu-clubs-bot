@@ -8,15 +8,15 @@ import (
 )
 
 func EventName(name string, _ map[string]interface{}) bool {
-	return utf8.RuneCountInString(name) >= 5 && utf8.RuneCountInString(name) <= 30
+	return utf8.RuneCountInString(name) >= 5 && utf8.RuneCountInString(name) <= 45
 }
 
 func EventDescription(description string, _ map[string]interface{}) bool {
-	return utf8.RuneCountInString(description) <= 150
+	return utf8.RuneCountInString(description) <= 250
 }
 
 func EventLocation(location string, _ map[string]interface{}) bool {
-	return utf8.RuneCountInString(location) >= 5 && utf8.RuneCountInString(location) <= 150
+	return utf8.RuneCountInString(location) >= 5 && utf8.RuneCountInString(location) <= 75
 }
 
 func EventStartTime(start string, _ map[string]interface{}) bool {
@@ -82,7 +82,7 @@ func EventRegisteredEndTime(registeredEnd string, params map[string]interface{})
 }
 
 func EventAfterRegistrationText(afterRegistrationText string, _ map[string]interface{}) bool {
-	return utf8.RuneCountInString(afterRegistrationText) >= 10 && utf8.RuneCountInString(afterRegistrationText) <= 200
+	return utf8.RuneCountInString(afterRegistrationText) >= 10 && utf8.RuneCountInString(afterRegistrationText) <= 150
 }
 
 func EventMaxParticipants(maxParticipantsStr string, _ map[string]interface{}) bool {
