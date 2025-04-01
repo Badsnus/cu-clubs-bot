@@ -3360,8 +3360,8 @@ func usersToXLSX(users []dto.EventUser) (*bytes.Buffer, error) {
 	_ = f.SetCellValue(sheet, "A1", "ID")
 	_ = f.SetCellValue(sheet, "B1", "Фамилия")
 	_ = f.SetCellValue(sheet, "C1", "Имя")
-	_ = f.SetCellValue(sheet, "E1", "Username")
-	_ = f.SetCellValue(sheet, "F1", "Посетил")
+	_ = f.SetCellValue(sheet, "D1", "Username")
+	_ = f.SetCellValue(sheet, "E1", "Посетил")
 
 	for i, user := range users {
 		fio := strings.Split(user.User.FIO, " ")
@@ -3370,8 +3370,8 @@ func usersToXLSX(users []dto.EventUser) (*bytes.Buffer, error) {
 		_ = f.SetCellValue(sheet, "A"+strconv.Itoa(row), user.User.ID)
 		_ = f.SetCellValue(sheet, "B"+strconv.Itoa(row), fio[0])
 		_ = f.SetCellValue(sheet, "C"+strconv.Itoa(row), fio[1])
-		_ = f.SetCellValue(sheet, "E"+strconv.Itoa(row), user.User.Username)
-		_ = f.SetCellValue(sheet, "F"+strconv.Itoa(row), user.UserVisit)
+		_ = f.SetCellValue(sheet, "D"+strconv.Itoa(row), user.User.Username)
+		_ = f.SetCellValue(sheet, "e"+strconv.Itoa(row), user.UserVisit)
 	}
 
 	var buf bytes.Buffer
