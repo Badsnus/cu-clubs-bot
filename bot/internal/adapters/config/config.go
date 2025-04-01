@@ -2,11 +2,12 @@ package config
 
 import (
 	"fmt"
-	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/database/redis"
-	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/utils/location"
 	"log"
 	"os"
 	"time"
+
+	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/database/redis"
+	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/utils/location"
 
 	"gopkg.in/gomail.v2"
 
@@ -27,7 +28,12 @@ type Config struct {
 func initConfig() {
 	viper.SetConfigName("config")
 	viper.SetConfigType("yaml")
-	viper.AddConfigPath(".")
+
+	// Search config in multiple locations
+	viper.AddConfigPath("/opt/config") // docker mounted config
+	viper.AddConfigPath(".")           // current directory
+	viper.AddConfigPath("../")         // parent directory
+	viper.AddConfigPath("../../")
 
 	if err := viper.ReadInConfig(); err != nil {
 		panic(err)

@@ -23,7 +23,6 @@ go.work.sum
 
 .env
 .history
-/bot/config.yaml
 
 .idea
 .vscode
@@ -31,3 +30,4 @@ go.work.sum
 
 logs/*
 !logs/.gitkeep
+/config/config.yaml

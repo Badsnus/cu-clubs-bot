@@ -6,6 +6,7 @@ services:
       - redis
     volumes:
       - ./logs:/opt/logs
+      - ./config:/opt/config
     restart: always
     labels:
       - "com.centurylinklabs.watchtower.enable=true"
