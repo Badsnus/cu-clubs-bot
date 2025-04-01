@@ -31,6 +31,7 @@ type userService interface {
 }
 
 type clubService interface {
+	Get(ctx context.Context, id string) (*entity.Club, error)
 	GetByOwnerID(ctx context.Context, ownerID int64) ([]entity.Club, error)
 }
 

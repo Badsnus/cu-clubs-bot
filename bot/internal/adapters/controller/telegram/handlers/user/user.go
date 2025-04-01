@@ -50,6 +50,10 @@ type eventService interface {
 	Count(ctx context.Context, role entity.Role) (int64, error)
 }
 
+type clubService interface {
+	Get(ctx context.Context, id string) (*entity.Club, error)
+}
+
 type eventParticipantService interface {
 	Register(ctx context.Context, eventID string, userID int64) (*entity.EventParticipant, error)
 	Get(ctx context.Context, eventID string, userID int64) (*entity.EventParticipant, error)
@@ -67,6 +71,7 @@ type notificationService interface {
 type Handler struct {
 	userService             userService
 	eventService            eventService
+	clubService             clubService
 	eventParticipantService eventParticipantService
 	qrService               qrService
 	notificationService     notificationService
@@ -86,6 +91,8 @@ func New(b *bot.Bot) *Handler {
 	eventStorage := postgres.NewEventStorage(b.DB)
 	eventParticipantStorage := postgres.NewEventParticipantStorage(b.DB)
 	clubOwnerStorage := postgres.NewClubOwnerStorage(b.DB)
+
+	clubStorage := postgres.NewClubStorage(b.DB)
 
 	eventPartService := service.NewEventParticipantService(nil, nil, nil, eventParticipantStorage, nil, nil, nil, nil, nil, 0)
 
@@ -113,6 +120,7 @@ func New(b *bot.Bot) *Handler {
 		userService:             userSrvc,
 		eventService:            service.NewEventService(eventStorage),
 		eventParticipantService: eventPartService,
+		clubService:             service.NewClubService(clubStorage),
 		qrService:               qrSrvc,
 		notificationService: service.NewNotifyService(
 			b.Bot,
@@ -316,6 +324,20 @@ func (h Handler) event(c tele.Context) error {
 			}),
 		)
 	}
+
+	club, err := h.clubService.Get(context.Background(), event.ClubID)
+	if err != nil {
+		h.logger.Errorf("(user: %d) error while get club: %v", c.Sender().ID, err)
+		return c.Edit(
+			banner.Events.Caption(h.layout.Text(c, "technical_issues", err.Error())),
+			h.layout.Markup(c, "user:events:back", struct {
+				Page string
+			}{
+				Page: page,
+			}),
+		)
+	}
+
 	var registered bool
 	_, errGetParticipant := h.eventParticipantService.Get(context.Background(), eventID, c.Sender().ID)
 	if errGetParticipant != nil {
@@ -447,22 +469,26 @@ func (h Handler) event(c tele.Context) error {
 	_ = c.Edit(
 		banner.Events.Caption(h.layout.Text(c, "event_text", struct {
 			Name                  string
+			ClubName              string
 			Description           string
 			Location              string
 			StartTime             string
 			EndTime               string
 			RegistrationEnd       string
 			MaxParticipants       int
+			ParticipantsCount     int
 			AfterRegistrationText string
 			IsRegistered          bool
 		}{
 			Name:                  event.Name,
+			ClubName:              club.Name,
 			Description:           event.Description,
 			Location:              event.Location,
 			StartTime:             event.StartTime.In(location.Location()).Format("02.01.2006 15:04"),
 			EndTime:               endTime,
 			RegistrationEnd:       event.RegistrationEnd.In(location.Location()).Format("02.01.2006 15:04"),
 			MaxParticipants:       event.MaxParticipants,
+			ParticipantsCount:     participantsCount,
 			AfterRegistrationText: event.AfterRegistrationText,
 			IsRegistered:          registered,
 		})),
@@ -669,12 +695,38 @@ func (h Handler) myEvent(c tele.Context) error {
 		)
 	}
 
+	club, err := h.clubService.Get(context.Background(), event.ClubID)
+	if err != nil {
+		h.logger.Errorf("(user: %d) error while get club: %v", c.Sender().ID, err)
+		return c.Edit(
+			banner.Events.Caption(h.layout.Text(c, "technical_issues", err.Error())),
+			h.layout.Markup(c, "user:myEvents:back", struct {
+				Page string
+			}{
+				Page: page,
+			}),
+		)
+	}
+
 	eventParticipant, err := h.eventParticipantService.Get(context.Background(), eventID, c.Sender().ID)
 	if err != nil {
 		h.logger.Errorf("(user: %d) error while getting event participant from db: %v", c.Sender().ID, err)
 		return c.Edit(
 			banner.Events.Caption(h.layout.Text(c, "technical_issues", err.Error())),
 			h.layout.Markup(c, "user:myEvents:back", struct {
+				Page string
+			}{
+				Page: page,
+			}),
+		)
+	}
+
+	participantsCount, err := h.eventParticipantService.CountByEventID(context.Background(), eventID)
+	if err != nil {
+		h.logger.Errorf("(user: %d) error while get participants count: %v", c.Sender().ID, err)
+		return c.Edit(
+			banner.Events.Caption(h.layout.Text(c, "technical_issues", err.Error())),
+			h.layout.Markup(c, "user:events:back", struct {
 				Page string
 			}{
 				Page: page,
@@ -690,23 +742,27 @@ func (h Handler) myEvent(c tele.Context) error {
 	_ = c.Edit(
 		banner.Events.Caption(h.layout.Text(c, "my_event_text", struct {
 			Name                  string
+			ClubName              string
 			Description           string
 			Location              string
 			StartTime             string
 			EndTime               string
 			RegistrationEnd       string
 			MaxParticipants       int
+			ParticipantsCount     int
 			AfterRegistrationText string
 			IsOver                bool
 			IsVisited             bool
 		}{
 			Name:                  event.Name,
+			ClubName:              club.Name,
 			Description:           event.Description,
 			Location:              event.Location,
 			StartTime:             event.StartTime.In(location.Location()).Format("02.01.2006 15:04"),
 			EndTime:               endTime,
 			RegistrationEnd:       event.RegistrationEnd.In(location.Location()).Format("02.01.2006 15:04"),
 			MaxParticipants:       event.MaxParticipants,
+			ParticipantsCount:     participantsCount,
 			AfterRegistrationText: event.AfterRegistrationText,
 			IsOver:                event.IsOver(0),
 			IsVisited:             eventParticipant.IsEventQr || eventParticipant.IsUserQr,

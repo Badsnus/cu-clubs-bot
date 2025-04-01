@@ -24,6 +24,24 @@ func (h Handler) eventMenu(c tele.Context, eventID string) error {
 		)
 	}
 
+	club, err := h.clubService.Get(context.Background(), event.ClubID)
+	if err != nil {
+		h.logger.Errorf("(user: %d) error while get club: %v", c.Sender().ID, err)
+		return c.Send(
+			banner.Events.Caption(h.layout.Text(c, "technical_issues", err.Error())),
+			h.layout.Markup(c, "mainMenu:back"),
+		)
+	}
+
+	participantsCount, err := h.eventParticipantService.CountByEventID(context.Background(), eventID)
+	if err != nil {
+		h.logger.Errorf("(user: %d) error while get participants count: %v", c.Sender().ID, err)
+		return c.Edit(
+			banner.Events.Caption(h.layout.Text(c, "technical_issues", err.Error())),
+			h.layout.Markup(c, "mainMenu:back"),
+		)
+	}
+
 	var registered bool
 	_, errGetParticipant := h.eventParticipantService.Get(context.Background(), eventID, c.Sender().ID)
 	if errGetParticipant != nil {
@@ -46,22 +64,26 @@ func (h Handler) eventMenu(c tele.Context, eventID string) error {
 	_ = c.Send(
 		banner.Events.Caption(h.layout.Text(c, "event_text", struct {
 			Name                  string
+			ClubName              string
 			Description           string
 			Location              string
 			StartTime             string
 			EndTime               string
 			RegistrationEnd       string
 			MaxParticipants       int
+			ParticipantsCount     int
 			AfterRegistrationText string
 			IsRegistered          bool
 		}{
 			Name:                  event.Name,
+			ClubName:              club.Name,
 			Description:           event.Description,
 			Location:              event.Location,
 			StartTime:             event.StartTime.In(location.Location()).Format("02.01.2006 15:04"),
 			EndTime:               endTime,
 			RegistrationEnd:       event.RegistrationEnd.In(location.Location()).Format("02.01.2006 15:04"),
 			MaxParticipants:       event.MaxParticipants,
+			ParticipantsCount:     participantsCount,
 			AfterRegistrationText: event.AfterRegistrationText,
 			IsRegistered:          registered,
 		})),
