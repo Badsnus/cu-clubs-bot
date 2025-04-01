@@ -14,7 +14,6 @@ type Event struct {
 	UpdatedAt             time.Time
 	DeletedAt             gorm.DeletedAt
 	ClubID                string `gorm:"not null;type:uuid"`
-	Club                  Club
 	Name                  string `gorm:"not null"`
 	Description           string `gorm:"not null"`
 	AfterRegistrationText string

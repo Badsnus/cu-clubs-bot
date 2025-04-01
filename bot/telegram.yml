@@ -200,17 +200,14 @@ buttons:
 
   clubOwner:create_event:description_skip:
     unique: cOwner_createEvent_descSkip
-    callback_data: "cOwner"
     text: '{{ text `skip` }}'
 
   clubOwner:create_event:end_time_skip:
     unique: cOwner_createEvent_eTimeSkip
-    callback_data: "cOwner"
     text: '{{ text `skip` }}'
 
   clubOwner:create_event:after_registration_text_skip:
     unique: cOwner_createEvent_AfterRegTextSkip
-    callback_data: "cOwner"
     text: '{{ text `skip` }}'
 
   clubOwner:create_event:confirm:
@@ -501,6 +498,7 @@ markups:
   clubOwner:event:menu:
     - [ clubOwner:event:settings ]
     - [ clubOwner:event:mailing ]
+    - [ clubOwner:event:users ]
     - [ clubOwner:event:delete ]
     - [ clubOwner:events:back ]
   clubOwner:event:back:
