@@ -1,8 +1,10 @@
 package clubowner
 
 import (
+	"bytes"
 	"context"
 	"errors"
+	"github.com/xuri/excelize/v2"
 	"slices"
 	"strconv"
 	"strings"
@@ -3111,146 +3113,89 @@ func (h Handler) declineEventDelete(c tele.Context) error {
 	)
 }
 
-//func (h Handler) users(c tele.Context) error {
-//	data := strings.Split(c.Callback().Data, " ")
-//	if len(data) != 2 {
-//		return errorz.ErrInvalidCallbackData
-//	}
-//
-//	eventID := data[0]
-//	page := data[1]
-//	h.logger.Infof("(user: %d) get registered users (eventID=%s)", c.Sender().ID, eventID)
-//
-//	event, err := h.eventService.Get(context.Background(), eventID)
-//	if err != nil {
-//		return c.Send(
-//			banner.ClubOwner.Caption(h.layout.Text(c, "technical_issues", err.Error())),
-//			h.layout.Markup(c, "core:hide"),
-//		)
-//	}
-//
-//	club, err := h.clubService.Get(context.Background(), event.ClubID)
-//	if err != nil {
-//		return c.Send(
-//			banner.ClubOwner.Caption(h.layout.Text(c, "technical_issues", err.Error())),
-//			h.layout.Markup(c, "core:hide"),
-//		)
-//	}
-//
-//	registeredUsersCount, err := h.eventParticipantService.CountByEventID(context.Background(), event.ID)
-//	if err != nil {
-//		h.logger.Errorf("(user: %d) error while get registered users count: %v", c.Sender().ID, err)
-//		return c.Edit(
-//			banner.ClubOwner.Caption(h.layout.Text(c, "technical_issues", err.Error())),
-//			h.layout.Markup(c, "clubOwner:events:back", struct {
-//				ID   string
-//				Page string
-//			}{
-//				ID:   event.ClubID,
-//				Page: page,
-//			}),
-//		)
-//	}
-//
-//	visitedUsersCount, err := h.eventParticipantService.CountVisitedByEventID(context.Background(), event.ID)
-//	if err != nil {
-//		h.logger.Errorf("(user: %d) error while get visited users count: %v", c.Sender().ID, err)
-//		return c.Edit(
-//			banner.ClubOwner.Caption(h.layout.Text(c, "technical_issues", err.Error())),
-//			h.layout.Markup(c, "clubOwner:events:back", struct {
-//				ID   string
-//				Page string
-//			}{
-//				ID:   event.ClubID,
-//				Page: page,
-//			}),
-//		)
-//	}
-//
-//	users, err := h.userService.GetEventUsers(context.Background(), eventID)
-//	if err != nil {
-//		return c.Send(
-//			banner.ClubOwner.Caption(h.layout.Text(c, "technical_issues", err.Error())),
-//			h.layout.Markup(c, "core:hide"),
-//		)
-//	}
-//
-//	buffer, err := usersToXLSX(users)
-//	if err != nil {
-//		return c.Send(
-//			banner.ClubOwner.Caption(h.layout.Text(c, "technical_issues", err.Error())),
-//			h.layout.Markup(c, "core:hide"),
-//		)
-//	}
-//
-//	file := &tele.Document{
-//		File:     tele.FromReader(buffer),
-//		Caption:  h.layout.Text(c, "registered_users_text"),
-//		FileName: "users.xlsx",
-//	}
-//
-//	_ = c.Send(file)
-//	time.Sleep(1 * time.Second)
-//	_ = c.Delete()
-//
-//	eventMarkup := h.layout.Markup(c, "clubOwner:event:menu", struct {
-//		ID     string
-//		ClubID string
-//		Page   string
-//	}{
-//		ID:     eventID,
-//		ClubID: event.ClubID,
-//		Page:   page,
-//	})
-//
-//	if club.QrAllowed {
-//		eventMarkup.InlineKeyboard = append(
-//			[][]tele.InlineButton{{*h.layout.Button(c, "clubOwner:event:qr", struct {
-//				ID   string
-//				Page string
-//			}{
-//				ID:   eventID,
-//				Page: page,
-//			}).Inline()}},
-//			eventMarkup.InlineKeyboard...,
-//		)
-//	}
-//
-//	endTime := event.EndTime.In(location.Location()).Format("02.01.2006 15:04")
-//	if event.EndTime.Year() == 1 {
-//		endTime = ""
-//	}
-//
-//	return c.Send(
-//		banner.Events.Caption(h.layout.Text(c, "club_owner_event_text", struct {
-//			Name                  string
-//			Description           string
-//			Location              string
-//			StartTime             string
-//			EndTime               string
-//			RegistrationEnd       string
-//			MaxParticipants       int
-//			ParticipantsCount     int
-//			VisitedCount          int
-//			AfterRegistrationText string
-//			IsRegistered          bool
-//			Link                  string
-//		}{
-//			Name:                  event.Name,
-//			Description:           event.Description,
-//			Location:              event.Location,
-//			StartTime:             event.StartTime.In(location.Location()).Format("02.01.2006 15:04"),
-//			EndTime:               endTime,
-//			RegistrationEnd:       event.RegistrationEnd.In(location.Location()).Format("02.01.2006 15:04"),
-//			MaxParticipants:       event.MaxParticipants,
-//			ParticipantsCount:     registeredUsersCount,
-//			VisitedCount:          visitedUsersCount,
-//			AfterRegistrationText: event.AfterRegistrationText,
-//			Link:                  event.Link(c.Bot().Me.Username),
-//		})),
-//		eventMarkup,
-//	)
-//}
+func (h Handler) registeredUsers(c tele.Context) error {
+	data := strings.Split(c.Callback().Data, " ")
+	if len(data) != 2 {
+		return errorz.ErrInvalidCallbackData
+	}
+
+	eventID := data[0]
+	//page := data[1]
+	//h.logger.Infof("(user: %d) get registered users (eventID=%s)", c.Sender().ID, eventID)
+	//
+	//event, err := h.eventService.Get(context.Background(), eventID)
+	//if err != nil {
+	//	return c.Send(
+	//		banner.ClubOwner.Caption(h.layout.Text(c, "technical_issues", err.Error())),
+	//		h.layout.Markup(c, "core:hide"),
+	//	)
+	//}
+
+	//club, err := h.clubService.Get(context.Background(), event.ClubID)
+	//if err != nil {
+	//	return c.Send(
+	//		banner.ClubOwner.Caption(h.layout.Text(c, "technical_issues", err.Error())),
+	//		h.layout.Markup(c, "core:hide"),
+	//	)
+	//}
+	//
+	//registeredUsersCount, err := h.eventParticipantService.CountByEventID(context.Background(), event.ID)
+	//if err != nil {
+	//	h.logger.Errorf("(user: %d) error while get registered users count: %v", c.Sender().ID, err)
+	//	return c.Edit(
+	//		banner.ClubOwner.Caption(h.layout.Text(c, "technical_issues", err.Error())),
+	//		h.layout.Markup(c, "clubOwner:events:back", struct {
+	//			ID   string
+	//			Page string
+	//		}{
+	//			ID:   event.ClubID,
+	//			Page: page,
+	//		}),
+	//	)
+	//}
+
+	//visitedUsersCount, err := h.eventParticipantService.CountVisitedByEventID(context.Background(), event.ID)
+	//if err != nil {
+	//	h.logger.Errorf("(user: %d) error while get visited users count: %v", c.Sender().ID, err)
+	//	return c.Edit(
+	//		banner.ClubOwner.Caption(h.layout.Text(c, "technical_issues", err.Error())),
+	//		h.layout.Markup(c, "clubOwner:events:back", struct {
+	//			ID   string
+	//			Page string
+	//		}{
+	//			ID:   event.ClubID,
+	//			Page: page,
+	//		}),
+	//	)
+	//}
+
+	users, err := h.userService.GetEventUsers(context.Background(), eventID)
+	if err != nil {
+		return c.Send(
+			banner.ClubOwner.Caption(h.layout.Text(c, "technical_issues", err.Error())),
+			h.layout.Markup(c, "core:hide"),
+		)
+	}
+
+	buffer, err := usersToXLSX(users)
+	if err != nil {
+		return c.Send(
+			banner.ClubOwner.Caption(h.layout.Text(c, "technical_issues", err.Error())),
+			h.layout.Markup(c, "core:hide"),
+		)
+	}
+
+	file := &tele.Document{
+		File:     tele.FromReader(buffer),
+		Caption:  h.layout.Text(c, "registered_users_text"),
+		FileName: "users.xlsx",
+	}
+
+	return c.Send(
+		file,
+		h.layout.Markup(c, "core:hide"),
+	)
+}
 
 func (h Handler) eventQRCode(c tele.Context) error {
 	data := strings.Split(c.Callback().Data, " ")
@@ -3365,8 +3310,8 @@ func (h Handler) ClubOwnerSetup(group *tele.Group, middle *middlewares.Handler) 
 	group.Handle(h.layout.Callback("clubOwner:event:delete"), h.deleteEvent)
 	group.Handle(h.layout.Callback("clubOwner:event:delete:accept"), h.acceptEventDelete)
 	group.Handle(h.layout.Callback("clubOwner:event:delete:decline"), h.declineEventDelete)
-	// removed due to legal issues
-	//group.Handle(h.layout.Callback("clubOwner:event:users"), h.users)
+
+	group.Handle(h.layout.Callback("clubOwner:event:users"), h.registeredUsers)
 	group.Handle(h.layout.Callback("clubOwner:event:qr"), h.eventQRCode)
 
 	group.Handle(h.layout.Callback("clubOwner:event:mailing"), h.eventMailing)
@@ -3408,33 +3353,31 @@ func parseEventCallback(callbackData string) (string, int, error) {
 	return clubID, p, nil
 }
 
-//func usersToXLSX(users []dto.EventUser) (*bytes.Buffer, error) {
-//	f := excelize.NewFile()
-//
-//	sheet := "Sheet1"
-//	_ = f.SetCellValue(sheet, "A1", "ID")
-//	_ = f.SetCellValue(sheet, "B1", "Фамилия")
-//	_ = f.SetCellValue(sheet, "C1", "Имя")
-//	_ = f.SetCellValue(sheet, "D1", "Отчество")
-//	_ = f.SetCellValue(sheet, "E1", "Username")
-//	_ = f.SetCellValue(sheet, "F1", "Посетил")
-//
-//	for i, user := range users {
-//		fio := strings.Split(user.FIO, " ")
-//
-//		row := i + 2
-//		_ = f.SetCellValue(sheet, "A"+strconv.Itoa(row), user.ID)
-//		_ = f.SetCellValue(sheet, "B"+strconv.Itoa(row), fio[0])
-//		_ = f.SetCellValue(sheet, "C"+strconv.Itoa(row), fio[1])
-//		_ = f.SetCellValue(sheet, "D"+strconv.Itoa(row), fio[2])
-//		_ = f.SetCellValue(sheet, "E"+strconv.Itoa(row), user.Username)
-//		_ = f.SetCellValue(sheet, "F"+strconv.Itoa(row), user.UserVisit)
-//	}
-//
-//	var buf bytes.Buffer
-//	if err := f.Write(&buf); err != nil {
-//		return nil, err
-//	}
-//
-//	return &buf, nil
-//}
+func usersToXLSX(users []dto.EventUser) (*bytes.Buffer, error) {
+	f := excelize.NewFile()
+
+	sheet := "Sheet1"
+	_ = f.SetCellValue(sheet, "A1", "ID")
+	_ = f.SetCellValue(sheet, "B1", "Фамилия")
+	_ = f.SetCellValue(sheet, "C1", "Имя")
+	_ = f.SetCellValue(sheet, "D1", "Username")
+	_ = f.SetCellValue(sheet, "E1", "Посетил")
+
+	for i, user := range users {
+		fio := strings.Split(user.User.FIO, " ")
+
+		row := i + 2
+		_ = f.SetCellValue(sheet, "A"+strconv.Itoa(row), user.User.ID)
+		_ = f.SetCellValue(sheet, "B"+strconv.Itoa(row), fio[0])
+		_ = f.SetCellValue(sheet, "C"+strconv.Itoa(row), fio[1])
+		_ = f.SetCellValue(sheet, "D"+strconv.Itoa(row), user.User.Username)
+		_ = f.SetCellValue(sheet, "e"+strconv.Itoa(row), user.UserVisit)
+	}
+
+	var buf bytes.Buffer
+	if err := f.Write(&buf); err != nil {
+		return nil, err
+	}
+
+	return &buf, nil
+}

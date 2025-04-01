@@ -89,13 +89,19 @@ my_clubs: Мои клубы
 admin_menu: Админ-меню
 qr: QR-код
 qr_text: Ваш QR-код для посещения мероприятий
-event_qr_text: QR-код мероприятия
+event_qr_text: |-
+  <b>QR-код мероприятия</b>
+  
+  Пользователи могут отсканировать данный QR-код чтобы подтвердить посещение мероприятия
+  
+  <i>QR-код могут отсканировать даже не зарегистрированные на мероприятие пользователи</i>
 
 # user
 events_list: |-
   <b>Список мероприятий</b>
 event_text: |-
   <b>{{.Name}}</b>
+  <i>Клуб</i>: {{.ClubName}}
 
   <b>Описание:</b>
   <blockquote>{{if .Description}}{{.Description}}{{else}}<i>Не указано</i>{{end}}</blockquote>
@@ -104,7 +110,7 @@ event_text: |-
   <b>Начало:</b> {{.StartTime}}
   <b>Окончание:</b> {{if .EndTime}}{{.EndTime}}{{else}}<i>Не указано</i>{{end}}
   <b>Завершение регистрации:</b> {{.RegistrationEnd}}
-  <b>Максимальное количество участников:</b> {{if .MaxParticipants}}{{.MaxParticipants}}{{else}}<i>Не ограничено</i>{{end}}
+  <b>Количество участников:</b> {{if .MaxParticipants}}{{.ParticipantsCount}}/{{.MaxParticipants}}{{else}}<i>Не ограничено</i>{{end}}
 
   {{if .IsRegistered}}{{if .AfterRegistrationText}}<b>Текст после регистрации:</b>
   <blockquote>{{.AfterRegistrationText}}</blockquote>{{end}}{{end}}
@@ -126,6 +132,7 @@ event_exported_text: |-
 event_over: ⌛️ Мероприятие прошло
 my_event_text: |-
   <b>{{.Name}}</b>
+  <i>Клуб</i>: {{.ClubName}}
 
   <b>Описание:</b>
   <blockquote>{{if .Description}}{{.Description}}{{else}}<i>Не указано</i>{{end}}</blockquote>
@@ -134,7 +141,7 @@ my_event_text: |-
   <b>Начало:</b> {{.StartTime}}
   <b>Окончание:</b> {{if .EndTime}}{{.EndTime}}{{else}}<i>Не указано</i>{{end}}
   <b>Завершение регистрации:</b> {{.RegistrationEnd}}
-  <b>Максимальное количество участников:</b> {{if .MaxParticipants}}{{.MaxParticipants}}{{else}}<i>Не ограничено</i>{{end}}
+  <b>Количество участников:</b> {{if .MaxParticipants}}{{.ParticipantsCount}}/{{.MaxParticipants}}{{else}}<i>Не ограничено</i>{{end}}
   {{if .AfterRegistrationText}}
   <b>Текст после регистрации:</b>
   <blockquote>{{.AfterRegistrationText}}</blockquote>
