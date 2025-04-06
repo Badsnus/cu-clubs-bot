@@ -54,6 +54,7 @@ func (h Handler) auth(c tele.Context, authCode string) error {
 	h.logger.Infof("(user: %d) new user created(role: %s)", c.Sender().ID, newUser.Role)
 
 	h.codesStorage.Clear(c.Sender().ID)
+	h.codesStorage.Clear(c.Sender().ID)
 	h.emailsStorage.Clear(c.Sender().ID)
 
 	return h.menuHandler.SendMenu(c)

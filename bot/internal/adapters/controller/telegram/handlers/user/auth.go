@@ -3,7 +3,6 @@ package user
 import (
 	"context"
 	"errors"
-
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/database/redis/emails"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/entity"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/utils/banner"
@@ -230,15 +229,15 @@ func (h Handler) studentAuth(c tele.Context) error {
 		}
 	}
 
-	_, err := h.codesStorage.Get(c.Sender().ID)
-	if err != nil && !errors.Is(err, redis.Nil) {
+	canResend, err := h.codesStorage.GetCanResend(c.Sender().ID)
+	if err != nil {
 		h.logger.Errorf("(user: %d) error while getting auth code from redis: %v", c.Sender().ID, err)
 		return c.Send(
 			banner.Auth.Caption(h.layout.Text(c, "technical_issues", err.Error())),
 		)
 	}
 	var data, code string
-	if errors.Is(err, redis.Nil) {
+	if canResend {
 		data, code, err = h.userService.SendAuthCode(context.Background(), email)
 		if err != nil {
 			h.logger.Errorf("(user: %d) error while sending auth code: %v", c.Sender().ID, err)
@@ -250,6 +249,7 @@ func (h Handler) studentAuth(c tele.Context) error {
 
 		h.emailsStorage.Set(c.Sender().ID, email, "", viper.GetDuration("bot.session.email-ttl"))
 		h.codesStorage.Set(c.Sender().ID, code, data, viper.GetDuration("bot.session.auth-ttl"))
+		h.codesStorage.SetCanResend(c.Sender().ID, true, viper.GetDuration("bot.session.resend-ttl"))
 
 		h.logger.Infof("(user: %d) auth code sent on %s", c.Sender().ID, email)
 
@@ -275,8 +275,8 @@ func (h Handler) backToAuthMenu(c tele.Context) error {
 func (h Handler) resendEmailConfirmationCode(c tele.Context) error {
 	h.logger.Infof("(user: %d) resend auth code", c.Sender().ID)
 
-	_, err := h.codesStorage.Get(c.Sender().ID)
-	if err != nil && !errors.Is(err, redis.Nil) {
+	canResend, err := h.codesStorage.GetCanResend(c.Sender().ID)
+	if err != nil {
 		h.logger.Errorf("(user: %d) error while getting auth code from redis: %v", c.Sender().ID, err)
 		return c.Send(
 			banner.Auth.Caption(h.layout.Text(c, "technical_issues", err.Error())),
@@ -285,7 +285,7 @@ func (h Handler) resendEmailConfirmationCode(c tele.Context) error {
 
 	var data, code string
 	var email emails.Email
-	if errors.Is(err, redis.Nil) {
+	if canResend {
 		email, err = h.emailsStorage.Get(c.Sender().ID)
 		if err != nil && !errors.Is(err, redis.Nil) {
 			h.logger.Errorf("(user: %d) error while getting user email from redis: %v", c.Sender().ID, err)
@@ -310,11 +310,12 @@ func (h Handler) resendEmailConfirmationCode(c tele.Context) error {
 
 		h.emailsStorage.Set(c.Sender().ID, email.Email, "", viper.GetDuration("bot.session.email-ttl"))
 		h.codesStorage.Set(c.Sender().ID, code, data, viper.GetDuration("bot.session.auth-ttl"))
+		h.codesStorage.SetCanResend(c.Sender().ID, true, viper.GetDuration("bot.session.resend-ttl"))
 
-		h.logger.Infof("(user: %d) auth code sent on %s", c.Sender().ID, email)
+		h.logger.Infof("(user: %d) auth code sent on %s", c.Sender().ID, email.Email)
 
 		return c.Edit(
-			banner.Auth.Caption(h.layout.Text(c, "email_confirmation_code_request")),
+			banner.Auth.Caption(h.layout.Text(c, "email_auth_link_resent")),
 			h.layout.Markup(c, "auth:resendMenu"),
 		)
 	}
