@@ -31,7 +31,7 @@ services:
       - "com.centurylinklabs.watchtower.enable=false"
     command: -i 60
     volumes:
-      - /home/ubuntu/.docker/config.json:/config.json
+      - /home/ubuntu/.docker:/config
       - /var/run/docker.sock:/var/run/docker.sock
 
 volumes:
