@@ -43,9 +43,12 @@ func GetMessageText(msg *tele.Message) string {
 	}
 }
 
-func GetMaxRegisteredEndTime(startTimeStr string) string {
-	const layout = "02.01.2006 15:04"
+func GetMaxRegisteredEndTime(startTime time.Time) time.Time {
+	if startTime.Weekday() == time.Sunday {
+		return time.Date(startTime.Year(), startTime.Month(), startTime.Day()-1, 12, 0, 0, 0, location.Location())
+	} else if startTime.Weekday() == time.Monday {
+		return time.Date(startTime.Year(), startTime.Month(), startTime.Day()-2, 12, 0, 0, 0, location.Location())
+	}
 
-	startTime, _ := time.ParseInLocation(layout, startTimeStr, location.Location())
-	return time.Date(startTime.Year(), startTime.Month(), startTime.Day(), 0, 0, 0, 0, startTime.Location()).Add(-24 * time.Hour).Add(16 * time.Hour).Format(layout)
+	return time.Date(startTime.Year(), startTime.Month(), startTime.Day(), 0, 0, 0, 0, startTime.Location()).Add(-24 * time.Hour).Add(16 * time.Hour)
 }

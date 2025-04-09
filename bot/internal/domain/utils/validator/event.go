@@ -70,9 +70,7 @@ func EventRegisteredEndTime(registeredEnd string, params map[string]interface{})
 		return false
 	}
 
-	maxRegisteredEndTime := time.Date(startTime.Year(), startTime.Month(), startTime.Day(), 0, 0, 0, 0, startTime.Location()).Add(-24 * time.Hour).Add(16 * time.Hour)
-
-	if registeredEndTime.After(maxRegisteredEndTime) {
+	if registeredEndTime.After(startTime) {
 		return false
 	}
 
