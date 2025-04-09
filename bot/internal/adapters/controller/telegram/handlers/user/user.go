@@ -339,6 +339,19 @@ func (h Handler) event(c tele.Context) error {
 		)
 	}
 
+	user, err := h.userService.Get(context.Background(), c.Sender().ID)
+	if err != nil {
+		h.logger.Errorf("(user: %d) error while get user: %v", c.Sender().ID, err)
+		return c.Edit(
+			banner.Events.Caption(h.layout.Text(c, "technical_issues", err.Error())),
+			h.layout.Markup(c, "user:events:back", struct {
+				Page string
+			}{
+				Page: page,
+			}),
+		)
+	}
+
 	var registered bool
 	_, errGetParticipant := h.eventParticipantService.Get(context.Background(), eventID, c.Sender().ID)
 	if errGetParticipant != nil {
@@ -372,28 +385,21 @@ func (h Handler) event(c tele.Context) error {
 
 	if c.Callback().Unique == "event_register" {
 		if !registered {
-			var user *entity.User
-			user, err = h.userService.Get(context.Background(), c.Sender().ID)
-			if err != nil {
-				h.logger.Errorf("(user: %d) error while get user: %v", c.Sender().ID, err)
-				return c.Edit(
-					banner.Events.Caption(h.layout.Text(c, "technical_issues", err.Error())),
-					h.layout.Markup(c, "user:events:back", struct {
-						Page string
-					}{
-						Page: page,
-					}),
-				)
-			}
-
 			var roleAllowed bool
+			var registrationActive bool
 			for _, role := range event.AllowedRoles {
 				if role == string(user.Role) {
 					roleAllowed = true
 				}
 			}
 
-			if (event.MaxParticipants == 0 || participantsCount < event.MaxParticipants) && event.RegistrationEnd.After(time.Now().In(location.Location())) && roleAllowed {
+			if user.Role == entity.Student {
+				registrationActive = event.RegistrationEnd.After(time.Now().In(location.Location()))
+			} else {
+				registrationActive = utils.GetMaxRegisteredEndTime(event.StartTime).After(time.Now().In(location.Location())) && event.RegistrationEnd.After(time.Now().In(location.Location()))
+			}
+
+			if (event.MaxParticipants == 0 || participantsCount < event.MaxParticipants) && registrationActive && roleAllowed {
 				_, err = h.eventParticipantService.Register(context.Background(), eventID, c.Sender().ID)
 				if err != nil {
 					h.logger.Errorf("(user: %d) error while register to event: %v", c.Sender().ID, err)
@@ -498,6 +504,17 @@ func (h Handler) event(c tele.Context) error {
 		)
 	}
 
+	var maxRegistrationEnd time.Time
+	if user.Role == entity.Student {
+		maxRegistrationEnd = event.RegistrationEnd
+	} else {
+		if event.RegistrationEnd.Before(utils.GetMaxRegisteredEndTime(event.StartTime)) {
+			maxRegistrationEnd = event.RegistrationEnd
+		} else {
+			maxRegistrationEnd = utils.GetMaxRegisteredEndTime(event.StartTime)
+		}
+	}
+
 	_ = c.Edit(
 		banner.Events.Caption(h.layout.Text(c, "event_text", struct {
 			Name                  string
@@ -518,7 +535,7 @@ func (h Handler) event(c tele.Context) error {
 			Location:              event.Location,
 			StartTime:             event.StartTime.In(location.Location()).Format("02.01.2006 15:04"),
 			EndTime:               endTime,
-			RegistrationEnd:       event.RegistrationEnd.In(location.Location()).Format("02.01.2006 15:04"),
+			RegistrationEnd:       maxRegistrationEnd.In(location.Location()).Format("02.01.2006 15:04"),
 			MaxParticipants:       event.MaxParticipants,
 			ParticipantsCount:     participantsCount,
 			AfterRegistrationText: event.AfterRegistrationText,
@@ -572,6 +589,19 @@ func (h Handler) eventCancelRegistration(c tele.Context) error {
 		)
 	}
 
+	user, err := h.userService.Get(context.Background(), c.Sender().ID)
+	if err != nil {
+		h.logger.Errorf("(user: %d) error while get user: %v", c.Sender().ID, err)
+		return c.Edit(
+			banner.Events.Caption(h.layout.Text(c, "technical_issues", err.Error())),
+			h.layout.Markup(c, "user:events:back", struct {
+				Page string
+			}{
+				Page: page,
+			}),
+		)
+	}
+
 	var registered bool
 	_, errGetParticipant := h.eventParticipantService.Get(context.Background(), eventID, c.Sender().ID)
 	if errGetParticipant != nil {
@@ -605,28 +635,21 @@ func (h Handler) eventCancelRegistration(c tele.Context) error {
 
 	if c.Callback().Unique == "event_register" {
 		if !registered {
-			var user *entity.User
-			user, err = h.userService.Get(context.Background(), c.Sender().ID)
-			if err != nil {
-				h.logger.Errorf("(user: %d) error while get user: %v", c.Sender().ID, err)
-				return c.Edit(
-					banner.Events.Caption(h.layout.Text(c, "technical_issues", err.Error())),
-					h.layout.Markup(c, "user:events:back", struct {
-						Page string
-					}{
-						Page: page,
-					}),
-				)
-			}
-
 			var roleAllowed bool
+			var registrationActive bool
 			for _, role := range event.AllowedRoles {
 				if role == string(user.Role) {
 					roleAllowed = true
 				}
 			}
 
-			if (event.MaxParticipants == 0 || participantsCount < event.MaxParticipants) && event.RegistrationEnd.After(time.Now().In(location.Location())) && roleAllowed {
+			if user.Role == entity.Student {
+				registrationActive = event.RegistrationEnd.After(time.Now().In(location.Location()))
+			} else {
+				registrationActive = utils.GetMaxRegisteredEndTime(event.StartTime).After(time.Now().In(location.Location())) && event.RegistrationEnd.After(time.Now().In(location.Location()))
+			}
+
+			if (event.MaxParticipants == 0 || participantsCount < event.MaxParticipants) && registrationActive && roleAllowed {
 				_, err = h.eventParticipantService.Register(context.Background(), eventID, c.Sender().ID)
 				if err != nil {
 					h.logger.Errorf("(user: %d) error while register to event: %v", c.Sender().ID, err)
@@ -731,6 +754,17 @@ func (h Handler) eventCancelRegistration(c tele.Context) error {
 		)
 	}
 
+	var maxRegistrationEnd time.Time
+	if user.Role == entity.Student {
+		maxRegistrationEnd = event.RegistrationEnd
+	} else {
+		if event.RegistrationEnd.Before(utils.GetMaxRegisteredEndTime(event.StartTime)) {
+			maxRegistrationEnd = event.RegistrationEnd
+		} else {
+			maxRegistrationEnd = utils.GetMaxRegisteredEndTime(event.StartTime)
+		}
+	}
+
 	_ = c.Edit(
 		banner.Events.Caption(h.layout.Text(c, "event_text", struct {
 			Name                  string
@@ -751,7 +785,7 @@ func (h Handler) eventCancelRegistration(c tele.Context) error {
 			Location:              event.Location,
 			StartTime:             event.StartTime.In(location.Location()).Format("02.01.2006 15:04"),
 			EndTime:               endTime,
-			RegistrationEnd:       event.RegistrationEnd.In(location.Location()).Format("02.01.2006 15:04"),
+			RegistrationEnd:       maxRegistrationEnd.In(location.Location()).Format("02.01.2006 15:04"),
 			MaxParticipants:       event.MaxParticipants,
 			ParticipantsCount:     participantsCount,
 			AfterRegistrationText: event.AfterRegistrationText,
@@ -940,6 +974,19 @@ func (h Handler) myEvent(c tele.Context) error {
 	page := callbackData[1]
 	h.logger.Infof("(user: %d) edit my event (event_id=%s)", c.Sender().ID, eventID)
 
+	user, err := h.userService.Get(context.Background(), c.Sender().ID)
+	if err != nil {
+		h.logger.Errorf("(user: %d) error while get user: %v", c.Sender().ID, err)
+		return c.Edit(
+			banner.Events.Caption(h.layout.Text(c, "technical_issues", err.Error())),
+			h.layout.Markup(c, "user:events:back", struct {
+				Page string
+			}{
+				Page: page,
+			}),
+		)
+	}
+
 	event, err := h.eventService.Get(context.Background(), eventID)
 	if err != nil {
 		h.logger.Errorf("(user: %d) error while get my event: %v", c.Sender().ID, err)
@@ -997,6 +1044,17 @@ func (h Handler) myEvent(c tele.Context) error {
 		endTime = ""
 	}
 
+	var maxRegistrationEnd time.Time
+	if user.Role == entity.Student {
+		maxRegistrationEnd = event.RegistrationEnd
+	} else {
+		if event.RegistrationEnd.Before(utils.GetMaxRegisteredEndTime(event.StartTime)) {
+			maxRegistrationEnd = event.RegistrationEnd
+		} else {
+			maxRegistrationEnd = utils.GetMaxRegisteredEndTime(event.StartTime)
+		}
+	}
+
 	_ = c.Edit(
 		banner.Events.Caption(h.layout.Text(c, "my_event_text", struct {
 			Name                  string
@@ -1018,7 +1076,7 @@ func (h Handler) myEvent(c tele.Context) error {
 			Location:              event.Location,
 			StartTime:             event.StartTime.In(location.Location()).Format("02.01.2006 15:04"),
 			EndTime:               endTime,
-			RegistrationEnd:       event.RegistrationEnd.In(location.Location()).Format("02.01.2006 15:04"),
+			RegistrationEnd:       maxRegistrationEnd.In(location.Location()).Format("02.01.2006 15:04"),
 			MaxParticipants:       event.MaxParticipants,
 			ParticipantsCount:     participantsCount,
 			AfterRegistrationText: event.AfterRegistrationText,

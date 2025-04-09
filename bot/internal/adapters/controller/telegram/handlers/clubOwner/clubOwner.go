@@ -1041,7 +1041,7 @@ func (h Handler) createEvent(c tele.Context) error {
 				return struct {
 					MaxRegisteredEndTime string
 				}{
-					MaxRegisteredEndTime: utils.GetMaxRegisteredEndTime(*steps[3].result),
+					MaxRegisteredEndTime: *steps[3].result,
 				}
 			},
 			errorKey:  "invalid_event_registered_end_time",
