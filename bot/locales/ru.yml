@@ -245,7 +245,7 @@ input_event_registered_end_time: |-
   Введите дату и время в формате: <code>DD.MM.YYYY HH:MM</code>
   Например: <code>24.02.2025 18:00</code>  
 
-  <i> Максимальное время регистрации: <code>{{.MaxRegisteredEndTime}}</code> </i>
+  <i>Максимальное время регистрации: <code>{{.MaxRegisteredEndTime}}</code> </i>
 invalid_event_registered_end_time: |-
   <b>Некорректная дата или время</b>  
 
