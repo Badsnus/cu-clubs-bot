@@ -99,12 +99,22 @@ buttons:
   user:events:event:register:
     unique: event_register
     callback_data: '{{.ID}} {{.Page}}'
-    text: '{{if .IsRegistered}}{{text `registered` }}{{else}}{{ text `register` }}{{end}}'
+    text: '{{ text `register` }}'
+
+  user:events:event:cancel_registration:
+    unique: cancel_registration
+    callback_data: '{{.ID}} {{.Page}}'
+    text: '{{ text `cancel_registration` }}'
 
   user:myEvents:event:
     unique: user_myEvent
     callback_data: '{{.ID}} {{.Page}}'
     text: '{{if .IsOver}}{{text `over` }} {{end}}{{.Name}}{{if .IsVisited}} {{text `tick`}}{{end}}'
+
+  user:myEvents:event:cancel_registration:
+    unique: myE_cancel_registration
+    callback_data: '{{.ID}} {{.Page}}'
+    text: '{{ text `cancel_registration` }}'
 
   user:myEvents:event:export:
     unique: myEvent_export
@@ -462,12 +472,12 @@ markups:
   user:events:back:
     - [ user:events:back ]
   user:events:event:
-    - [ user:events:event:register ]
     - [ user:myEvents:event:export ]
     - [ user:events:back ]
   user:myEvents:back:
     - [ user:myEvents:back ]
   user:myEvents:event:
+    - [ user:myEvents:event:cancel_registration ]
     - [ user:myEvents:event:export ]
     - [ user:myEvents:back ]
   user:url:event:

@@ -116,6 +116,7 @@ event_text: |-
   {{if .IsRegistered}}{{if .AfterRegistrationText}}<b>Текст после регистрации:</b>
   <blockquote>{{.AfterRegistrationText}}</blockquote>{{end}}{{end}}
 register: Зарегистрироваться
+cancel_registration: ❌ Отменить регистрацию
 registration_ended: |-
   К сожалению, регистрация на это мероприятие завершена
 max_participants_reached: |-
@@ -124,7 +125,7 @@ not_allowed_role: |-
   К сожалению, для вашей роли это мероприятие недоступно
 registered: ✅ Вы зарегистрированы
 my_events_list: |-
-  <b>Список мероприятий на которые вы регистрировались</b>
+  <b>Список мероприятий, на которые вы регистрировались</b>
 event_export: Экспорт в календарь
 event_exported_text: |-
   Файл <code>{{.FileName}}</code> содержит информацию о мероприятии
@@ -147,7 +148,7 @@ my_event_text: |-
   <b>Текст после регистрации:</b>
   <blockquote>{{.AfterRegistrationText}}</blockquote>
   {{end}}
-  {{if .IsOver}}<i>⌛️ Мероприятие прошло</i>{{else}}<b>✅ Вы зарегистрированы</b>{{end}}
+  {{if .IsOver}}<i>⌛️ Мероприятие прошло</i>{{end}}
   {{if .IsVisited}}<b>✅ Вы посетили мероприятие</b>{{else}}{{if .IsOver}}<i>❌ Вы не посетили мероприятие</i>{{end}}{{end}}
 
 #club owner menu
