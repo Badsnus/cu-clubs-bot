@@ -396,7 +396,7 @@ func (h Handler) event(c tele.Context) error {
 			if user.Role == entity.Student {
 				registrationActive = event.RegistrationEnd.After(time.Now().In(location.Location()))
 			} else {
-				registrationActive = utils.GetMaxRegisteredEndTime(event.StartTime).After(time.Now().In(location.Location()))
+				registrationActive = utils.GetMaxRegisteredEndTime(event.StartTime).After(time.Now().In(location.Location())) && event.RegistrationEnd.After(time.Now().In(location.Location()))
 			}
 
 			if (event.MaxParticipants == 0 || participantsCount < event.MaxParticipants) && registrationActive && roleAllowed {
@@ -508,7 +508,11 @@ func (h Handler) event(c tele.Context) error {
 	if user.Role == entity.Student {
 		maxRegistrationEnd = event.RegistrationEnd
 	} else {
-		maxRegistrationEnd = utils.GetMaxRegisteredEndTime(event.StartTime)
+		if event.RegistrationEnd.Before(utils.GetMaxRegisteredEndTime(event.StartTime)) {
+			maxRegistrationEnd = event.RegistrationEnd
+		} else {
+			maxRegistrationEnd = utils.GetMaxRegisteredEndTime(event.StartTime)
+		}
 	}
 
 	_ = c.Edit(
@@ -642,7 +646,7 @@ func (h Handler) eventCancelRegistration(c tele.Context) error {
 			if user.Role == entity.Student {
 				registrationActive = event.RegistrationEnd.After(time.Now().In(location.Location()))
 			} else {
-				registrationActive = utils.GetMaxRegisteredEndTime(event.StartTime).After(time.Now().In(location.Location()))
+				registrationActive = utils.GetMaxRegisteredEndTime(event.StartTime).After(time.Now().In(location.Location())) && event.RegistrationEnd.After(time.Now().In(location.Location()))
 			}
 
 			if (event.MaxParticipants == 0 || participantsCount < event.MaxParticipants) && registrationActive && roleAllowed {
@@ -754,7 +758,11 @@ func (h Handler) eventCancelRegistration(c tele.Context) error {
 	if user.Role == entity.Student {
 		maxRegistrationEnd = event.RegistrationEnd
 	} else {
-		maxRegistrationEnd = utils.GetMaxRegisteredEndTime(event.StartTime)
+		if event.RegistrationEnd.Before(utils.GetMaxRegisteredEndTime(event.StartTime)) {
+			maxRegistrationEnd = event.RegistrationEnd
+		} else {
+			maxRegistrationEnd = utils.GetMaxRegisteredEndTime(event.StartTime)
+		}
 	}
 
 	_ = c.Edit(
@@ -1040,7 +1048,11 @@ func (h Handler) myEvent(c tele.Context) error {
 	if user.Role == entity.Student {
 		maxRegistrationEnd = event.RegistrationEnd
 	} else {
-		maxRegistrationEnd = utils.GetMaxRegisteredEndTime(event.StartTime)
+		if event.RegistrationEnd.Before(utils.GetMaxRegisteredEndTime(event.StartTime)) {
+			maxRegistrationEnd = event.RegistrationEnd
+		} else {
+			maxRegistrationEnd = utils.GetMaxRegisteredEndTime(event.StartTime)
+		}
 	}
 
 	_ = c.Edit(

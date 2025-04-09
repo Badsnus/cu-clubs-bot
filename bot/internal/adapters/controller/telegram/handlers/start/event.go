@@ -75,7 +75,11 @@ func (h Handler) eventMenu(c tele.Context, eventID string) error {
 	if user.Role == entity.Student {
 		maxRegistrationEnd = event.RegistrationEnd
 	} else {
-		maxRegistrationEnd = utils.GetMaxRegisteredEndTime(event.StartTime)
+		if event.RegistrationEnd.Before(utils.GetMaxRegisteredEndTime(event.StartTime)) {
+			maxRegistrationEnd = event.RegistrationEnd
+		} else {
+			maxRegistrationEnd = utils.GetMaxRegisteredEndTime(event.StartTime)
+		}
 	}
 
 	_ = c.Send(
@@ -175,7 +179,7 @@ func (h Handler) eventRegister(c tele.Context) error {
 			if user.Role == entity.Student {
 				registrationActive = event.RegistrationEnd.After(time.Now().In(location.Location()))
 			} else {
-				registrationActive = utils.GetMaxRegisteredEndTime(event.StartTime).After(time.Now().In(location.Location()))
+				registrationActive = utils.GetMaxRegisteredEndTime(event.StartTime).After(time.Now().In(location.Location())) && event.RegistrationEnd.After(time.Now().In(location.Location()))
 			}
 
 			if (event.MaxParticipants == 0 || participantsCount < event.MaxParticipants) && registrationActive && roleAllowed {
