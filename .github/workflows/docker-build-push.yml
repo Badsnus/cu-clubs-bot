@@ -53,6 +53,50 @@ jobs:
         id: repo-name
         run: |
           echo "name=${GITHUB_REPOSITORY,,}" >> $GITHUB_OUTPUT
+
+      - name: Get PR information
+        id: pr-info
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            // Get the commit message
+            const commit = await github.rest.git.getCommit({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              commit_sha: context.sha
+            });
+            
+            // Extract PR number from commit message (Merge pull request #X from...)
+            const prMatch = commit.data.message.match(/Merge pull request #(\d+)/);
+            
+            if (prMatch && prMatch[1]) {
+              const prNumber = prMatch[1];
+            
+              // Get PR details
+              const { data: pullRequest } = await github.rest.pulls.get({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: prNumber
+              });
+            
+              core.setOutput('pr_name', pullRequest.title);
+              core.setOutput('pr_desc', pullRequest.body || 'No description provided');
+              core.setOutput('pr_number', prNumber);
+              console.log(`Found PR #${prNumber}: ${pullRequest.title}`);
+            } else {
+              // Fallback if we can't find PR info
+              core.setOutput('pr_name', 'Direct commit to main');
+              core.setOutput('pr_desc', commit.data.message);
+              core.setOutput('pr_number', 'N/A');
+              console.log('No PR found, using commit message');
+            }
+
+      - name: Set version information
+        id: version-info
+        run: |
+          # Get build date
+          echo "build_date=$(date -u +'%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_OUTPUT
       
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
@@ -70,5 +114,9 @@ jobs:
           context: ./bot
           push: true
           tags: ghcr.io/${{ steps.repo-name.outputs.name }}:${{ github.ref_name }}
+          build-args: |
+            PR_NAME=${{ steps.pr-info.outputs.pr_name }}
+            PR_DESC=${{ steps.pr-info.outputs.pr_desc }}
+            BUILD_DATE=${{ steps.version-info.outputs.build_date }}
           cache-from: type=gha
           cache-to: type=gha,mode=max

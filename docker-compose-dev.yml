@@ -21,7 +21,12 @@ services:
 
   bot:
     container_name: bot
-    build: ./bot
+    build:
+      context: ./bot
+      args:
+        PR_NAME: ${PR_NAME:-Development}
+        PR_DESC: ${PR_DESC:-Unknown}
+        BUILD_DATE: ${BUILD_DATE:-Unknown}
     depends_on:
       database:
         condition: service_healthy

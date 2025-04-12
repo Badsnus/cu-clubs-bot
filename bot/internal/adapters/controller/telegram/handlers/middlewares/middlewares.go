@@ -182,3 +182,19 @@ func (h Handler) ResetInputOnBack(next tele.HandlerFunc) tele.HandlerFunc {
 		return next(c)
 	}
 }
+
+// PrivateChatOnly middleware ensures the bot only responds to commands in private chats
+// and ignores commands in group chats.
+func (h Handler) PrivateChatOnly(next tele.HandlerFunc) tele.HandlerFunc {
+	return func(c tele.Context) error {
+		// Check if the chat is private
+		if c.Chat().Type != tele.ChatPrivate {
+			// If it's not a private chat, silently ignore the command
+			h.logger.Infof("Ignoring command in non-private chat (chat_id: %d, chat_type: %s)", c.Chat().ID, c.Chat().Type)
+			return nil
+		}
+
+		// If it's a private chat, proceed to the next handler
+		return next(c)
+	}
+}
