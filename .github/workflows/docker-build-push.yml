@@ -80,14 +80,23 @@ jobs:
                 pull_number: prNumber
               });
             
+              // Escape PR description for Docker build-args
+              let prDesc = pullRequest.body || 'No description provided';
+              // Replace newlines with \n and escape quotes
+              prDesc = prDesc.replace(/\r?\n/g, '\\n').replace(/"/g, '\\"');
+            
               core.setOutput('pr_name', pullRequest.title);
-              core.setOutput('pr_desc', pullRequest.body || 'No description provided');
+              core.setOutput('pr_desc', prDesc);
               core.setOutput('pr_number', prNumber);
               console.log(`Found PR #${prNumber}: ${pullRequest.title}`);
             } else {
               // Fallback if we can't find PR info
+              let commitMsg = commit.data.message;
+              // Replace newlines with \n and escape quotes
+              commitMsg = commitMsg.replace(/\r?\n/g, '\\n').replace(/"/g, '\\"');
+            
               core.setOutput('pr_name', 'Direct commit to main');
-              core.setOutput('pr_desc', commit.data.message);
+              core.setOutput('pr_desc', commitMsg);
               core.setOutput('pr_number', 'N/A');
               console.log('No PR found, using commit message');
             }
@@ -115,8 +124,8 @@ jobs:
           push: true
           tags: ghcr.io/${{ steps.repo-name.outputs.name }}:${{ github.ref_name }}
           build-args: |
-            PR_NAME=${{ steps.pr-info.outputs.pr_name }}
-            PR_DESC=${{ steps.pr-info.outputs.pr_desc }}
-            BUILD_DATE=${{ steps.version-info.outputs.build_date }}
+            PR_NAME="${{ steps.pr-info.outputs.pr_name }}"
+            PR_DESC="${{ steps.pr-info.outputs.pr_desc }}"
+            BUILD_DATE="${{ steps.version-info.outputs.build_date }}"
           cache-from: type=gha
           cache-to: type=gha,mode=max
