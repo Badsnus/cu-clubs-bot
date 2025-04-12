@@ -27,6 +27,8 @@ go.work.sum
 .idea
 .vscode
 .goose
+.roo
+.roomodes
 
 logs/*
 !logs/.gitkeep
