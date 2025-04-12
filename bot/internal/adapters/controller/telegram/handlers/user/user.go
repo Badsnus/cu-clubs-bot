@@ -206,6 +206,7 @@ func (h Handler) eventsList(c tele.Context) error {
 			h.layout.Markup(c, "mainMenu:back"),
 		)
 	}
+	h.logger.Infof("(user: %d, role: %s) Event count returned: %d", c.Sender().ID, user.Role, eventsCount) // Added log with role
 
 	events, err = h.eventService.GetWithPagination(
 		context.Background(),
@@ -230,6 +231,7 @@ func (h Handler) eventsList(c tele.Context) error {
 			h.layout.Markup(c, "mainMenu:back"),
 		)
 	}
+	h.logger.Infof("(user: %d, role: %s) GetWithPagination returned %d events for page %d (limit %d, offset %d)", c.Sender().ID, user.Role, len(events), p, eventsOnPage, p*eventsOnPage) // Added log with role
 
 	markup := c.Bot().NewMarkup()
 	for _, event := range events {
