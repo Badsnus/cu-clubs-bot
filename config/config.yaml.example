@@ -65,3 +65,6 @@ settings:
       channel-id: -10000000000 # канал для логов
       channel-log-level: 2 # от какого уровня лога будем отправлять его в канал
       locale: "ru"
+    version:
+      channel-id: -10000000000 # канал для уведомлений о версиях
+      notify-on-startup: false # отправлять уведомления при запуске

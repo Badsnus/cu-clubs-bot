@@ -100,6 +100,22 @@ func (b *Bot) Start() {
 				}
 			}
 		}
+
+		// Send version notification if enabled
+		if viper.GetBool("settings.version.notify-on-startup") {
+			versionLogger, err := logger.Named("version")
+			if err != nil {
+				logger.Log.Errorf("Failed to create version logger: %v", err)
+			} else {
+				versionService := service.NewVersionService(b.Bot, b.Layout, versionLogger)
+				err := versionService.SendStartupNotification(
+					viper.GetInt64("settings.version.channel-id"),
+				)
+				if err != nil {
+					logger.Log.Errorf("Failed to send version notification: %v", err)
+				}
+			}
+		}
 		b.Bot.Start()
 	}()
 

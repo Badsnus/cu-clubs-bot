@@ -55,7 +55,7 @@ func Setup(b *bot.Bot) {
 	menuHandler := menu.New(b)
 	adminHandler := admin.New(b)
 
-	//onEventHandler := handlers.NewOnEventHandler(b)
+	b.Use(middle.PrivateChatOnly)
 	if viper.GetBool("settings.logging.debug") {
 		b.Use(middleware.Logger())
 	}
