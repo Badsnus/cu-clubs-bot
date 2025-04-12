@@ -2,8 +2,9 @@ package postgres
 
 import (
 	"context"
-	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/utils/location"
 	"time"
+
+	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/utils/location"
 
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/dto"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/entity"
@@ -187,30 +188,47 @@ func (s *EventStorage) CountByClubID(ctx context.Context, clubID string) (int64,
 }
 
 // GetWithPagination is a function that gets a list of events from the database with pagination. (if role is empty, it will return all events)
+// If role is empty, it will return events with any role.
 func (s *EventStorage) GetWithPagination(ctx context.Context, limit, offset int, order string, role string, userID int64) ([]dto.Event, error) {
+	// Create the base query with all conditions
+	baseQuery := s.db.WithContext(ctx).
+		Table("events").
+		Where("registration_end > ?", time.Now())
+
+	// Apply role filtering if specified
+	if role != "" {
+		baseQuery = baseQuery.Where("? = ANY(allowed_roles)", role)
+	}
+
+	// Apply ordering and pagination to get the correct subset of events
+	var eventIDs []string
+	if err := baseQuery.Order(order).Limit(limit).Offset(offset).Pluck("id", &eventIDs).Error; err != nil {
+		return nil, err
+	}
+
+	// If no events match the criteria, return an empty result
+	if len(eventIDs) == 0 {
+		return []dto.Event{}, nil
+	}
+
+	// Get the full event data including registration status
 	var events []struct {
 		entity.Event
 		IsRegistered bool
 	}
 
-	query := s.db.WithContext(ctx).
+	err := s.db.WithContext(ctx).
 		Table("events").
 		Select("events.*, CASE WHEN ep.user_id IS NOT NULL THEN true ELSE false END as is_registered").
 		Joins("LEFT JOIN event_participants ep ON events.id = ep.event_id AND ep.user_id = ?", userID).
-		Where("registration_end > ?", time.Now())
-
-	if role != "" {
-		query = query.Where("? = ANY(allowed_roles)", role)
-	}
-
-	err := query.Order(order).
-		Limit(limit).
-		Offset(offset).
+		Where("events.id IN ?", eventIDs).
+		Order(order). // Maintain the same order
 		Find(&events).Error
 	if err != nil {
 		return nil, err
 	}
 
+	// Convert to DTOs
 	result := make([]dto.Event, len(events))
 	for i, event := range events {
 		result[i] = dto.NewEventFromEntity(event.Event, event.IsRegistered)
