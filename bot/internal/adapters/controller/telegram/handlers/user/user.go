@@ -233,9 +233,11 @@ func (h Handler) eventsList(c tele.Context) error {
 		)
 	}
 	h.logger.Infof("(user: %d, role: %s) GetWithPagination returned %d events for page %d (limit %d, offset %d)", c.Sender().ID, user.Role, len(events), p, eventsOnPage, p*eventsOnPage) // Added log with role
+	h.logger.Debugf("Events: %+v", events)
 
 	markup := c.Bot().NewMarkup()
 	for _, event := range events {
+		h.logger.Debugf("Event: %s (%s)", event.Name, event.ID)
 		rows = append(rows, markup.Row(*h.layout.Button(c, "user:events:event", struct {
 			ID           string
 			Name         string
@@ -248,6 +250,8 @@ func (h Handler) eventsList(c tele.Context) error {
 			IsRegistered: event.IsRegistered,
 		})))
 	}
+	h.logger.Debugf("Events: %+v", rows)
+
 	pagesCount := (int(eventsCount) - 1) / eventsOnPage
 	if p == 0 {
 		prevPage = pagesCount

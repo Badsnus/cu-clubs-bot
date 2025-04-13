@@ -79,7 +79,7 @@ buttons:
   user:events:event:
     unique: user_event
     callback_data: '{{.ID}} {{.Page}}'
-    text: '{{if .IsRegistered}}{{text `tick`}} {{end}}{{.Name}}'
+    text: '{{if .IsRegistered}}{{text `tick`}} {{end}}{{html .Name}}'
 
   user:events:next_page:
     unique: user_events_nextPage
@@ -109,7 +109,7 @@ buttons:
   user:myEvents:event:
     unique: user_myEvent
     callback_data: '{{.ID}} {{.Page}}'
-    text: '{{if .IsOver}}{{text `over` }} {{end}}{{.Name}}{{if .IsVisited}} {{text `tick`}}{{end}}'
+    text: '{{if .IsOver}}{{text `over` }} {{end}}{{html .Name}}{{if .IsVisited}} {{text `tick`}}{{end}}'
 
   user:myEvents:event:cancel_registration:
     unique: myE_cancel_registration
@@ -157,7 +157,7 @@ buttons:
   clubOwner:myClubs:club:
     unique: clubOwner_myClubs_club
     callback_data: '{{.ID}}'
-    text: '{{.Name}}'
+    text: '{{html .Name}}'
 
   clubOwner:myClubs:back:
     unique: clubOwner_myClubs_back
@@ -201,7 +201,7 @@ buttons:
   clubOwner:club:settings:warnings:user:
     unique: cOwner_warnings
     callback_data: '{{.ClubID}} {{.UserID}}'
-    text: '{{if .Warnings}}{{text `tick`}} {{.FIO}}{{else}}{{text `cross`}} {{.FIO}}{{end}}'
+    text: '{{if .Warnings}}{{text `tick`}} {{html .FIO}}{{else}}{{text `cross`}} {{html .FIO}}{{end}}'
 
   clubOwner:club:create_event:
     unique: clubOwner_club_createEvent
@@ -233,7 +233,7 @@ buttons:
   clubOwner:create_event:role:
     unique: event_role
     callback_data: '{{.ID}} {{.Role}}'
-    text: '{{if .Allowed}}{{text `tick`}}{{else}}{{text `cross`}}{{end}} {{.RoleName}}'
+    text: '{{if .Allowed}}{{text `tick`}}{{else}}{{text `cross`}}{{end}} {{html .RoleName}}'
 
   clubOwner:confirmMailing:
     unique: clubOwner_confirmMailing
@@ -271,7 +271,7 @@ buttons:
   clubOwner:events:event:
     unique: cOwner_events_event
     callback_data: '{{.ID}} {{.Page}}'
-    text: '{{if .IsOver}}{{text `over` }} {{end}}{{.Name}}'
+    text: '{{if .IsOver}}{{text `over` }} {{end}}{{html .Name}}'
 
   clubOwner:event:back:
     unique: clubOwner_event_back
@@ -361,7 +361,7 @@ buttons:
   clubOwner:activateQR:club:
     unique: activateQR_club
     callback_data: '{{.CallbackID}}'
-    text: '{{.Name}}'
+    text: '{{html .Name}}'
 
   clubOwner:activateQR:clubs:back:
     unique: activateQR_clubs_back
@@ -371,7 +371,7 @@ buttons:
   clubOwner:activateQR:event:
     unique: activateQR_event
     callback_data: '{{.CallbackID}}'
-    text: '{{.Name}}'
+    text: '{{html .Name}}'
 
   admin:create_club:
     unique: admin_createClub
@@ -388,7 +388,7 @@ buttons:
   admin:clubs:club:
     unique: admin_club
     callback_data: '{{.ID}} {{.Page}}'
-    text: '{{.Name}}'
+    text: '{{html .Name}}'
 
   admin:clubs:next_page:
     unique: admin_clubs_nextPage
@@ -413,7 +413,7 @@ buttons:
   admin:club:roles:role:
     unique: admin_role
     callback_data: '{{.ID}} {{.Page}} {{.Role}}'
-    text: '{{if .On}}{{text `tick`}} {{.RoleText}}{{else}}{{text `cross`}} {{.RoleText}}{{end}}'
+    text: '{{if .On}}{{text `tick`}} {{html .RoleText}}{{else}}{{text `cross`}} {{html .RoleText}}{{end}}'
 
   admin:clubs:back:
     unique: admin_clubs_back
