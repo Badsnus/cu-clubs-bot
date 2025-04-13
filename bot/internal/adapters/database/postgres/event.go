@@ -192,7 +192,7 @@ func (s *EventStorage) CountByClubID(ctx context.Context, clubID string) (int64,
 func (s *EventStorage) GetWithPagination(ctx context.Context, limit, offset int, order string, role string, userID int64) ([]dto.Event, error) {
 	// Create the base query with all conditions
 	baseQuery := s.db.WithContext(ctx).
-		Table("events").
+		Model(&entity.Event{}). // Use Model() to ensure deleted_at IS NULL filter
 		Where("registration_end > ?", time.Now())
 
 	// Apply role filtering if specified
@@ -218,7 +218,7 @@ func (s *EventStorage) GetWithPagination(ctx context.Context, limit, offset int,
 	}
 
 	err := s.db.WithContext(ctx).
-		Table("events").
+		Model(&entity.Event{}). // Use Model() here too for consistency
 		Select("events.*, CASE WHEN ep.user_id IS NOT NULL THEN true ELSE false END as is_registered").
 		Joins("LEFT JOIN event_participants ep ON events.id = ep.event_id AND ep.user_id = ?", userID).
 		Where("events.id IN ?", eventIDs).
