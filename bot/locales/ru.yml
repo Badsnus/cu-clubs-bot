@@ -320,21 +320,21 @@ event_settings: Настройки
 event_users: Пользователи
 club_owner_event_text: |-
   Мероприятие <b>{{html .Name}}</b>
-    <b>Описание:</b>
-    <blockquote>{{if .Description}}{{html .Description}}{{else}}<i>Не указано</i>{{end}}</blockquote>
-    <b>Локация:</b> {{html .Location}}
+  <b>Описание:</b>
+  <blockquote>{{if .Description}}{{html .Description}}{{else}}<i>Не указано</i>{{end}}</blockquote>
+  <b>Локация:</b> {{html .Location}}
   
-    <b>Начало:</b> {{.StartTime}}
-    <b>Окончание:</b> {{if .EndTime}}{{.EndTime}}{{else}}<i>Не указано</i>{{end}}
-    <b>Завершение регистрации:</b> {{.RegistrationEnd}}
-    <b>Максимальное количество участников:</b> {{if .MaxParticipants}}{{.MaxParticipants}}{{else}}<i>Не ограничено</i>{{end}}
+  <b>Начало:</b> {{.StartTime}}
+  <b>Окончание:</b> {{if .EndTime}}{{.EndTime}}{{else}}<i>Не указано</i>{{end}}
+  <b>Завершение регистрации:</b> {{.RegistrationEnd}}
+  <b>Максимальное количество участников:</b> {{if .MaxParticipants}}{{.MaxParticipants}}{{else}}<i>Не ограничено</i>{{end}}
   
-    <b>Зарегистрировались:</b> {{.ParticipantsCount}}/{{if .MaxParticipants}}{{.MaxParticipants}}{{else}}∞{{end}}
+  <b>Зарегистрировались:</b> {{.ParticipantsCount}}/{{if .MaxParticipants}}{{.MaxParticipants}}{{else}}∞{{end}}
   
-    <b>Посетили: {{.VisitedCount}}</b>
+  <b>Посетили: {{.VisitedCount}}</b>
   
-    <b>Текст после регистрации:</b>
-    <blockquote>{{if .AfterRegistrationText}}{{html .AfterRegistrationText}}{{else}}<i>Не указан</i>{{end}}</blockquote>
+  <b>Текст после регистрации:</b>
+  <blockquote>{{if .AfterRegistrationText}}{{html .AfterRegistrationText}}{{else}}<i>Не указан</i>{{end}}</blockquote>
 
   <b>Ссылка на мероприятие:</b> <code>{{.Link}}</code>
 
