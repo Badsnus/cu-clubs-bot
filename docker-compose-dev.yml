@@ -25,7 +25,7 @@ services:
       context: ./bot
       args:
         PR_NAME: ${PR_NAME:-Development}
-        PR_DESC: ${PR_DESC:-Unknown}
+        PR_URL: ${PR_URL}
         BUILD_DATE: ${BUILD_DATE:-Unknown}
     depends_on:
       database:

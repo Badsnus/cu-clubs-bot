@@ -41,9 +41,9 @@ func (s *VersionService) GetVersionInfo() map[string]string {
 	}
 	info["pr_name"] = prName
 
-	// Get PR desc from environment variable
-	prDesc := os.Getenv("BOT_PR_DESC")
-	info["pr_desc"] = prDesc
+	// Get PR url from environment variable
+	prDesc := os.Getenv("BOT_PR_URL")
+	info["pr_url"] = prDesc
 
 	// Get build date from environment variable
 	buildDate := os.Getenv("BOT_BUILD_DATE")
@@ -60,7 +60,7 @@ func (s *VersionService) SendStartupNotification(channelID int64) error {
 	versionInfo := s.GetVersionInfo()
 
 	prName := versionInfo["pr_name"]
-	prDesc := versionInfo["pr_desc"]
+	prURL := versionInfo["pr_url"]
 	buildDate := versionInfo["build_date"]
 
 	chat, err := s.bot.ChatByID(channelID)
@@ -70,18 +70,17 @@ func (s *VersionService) SendStartupNotification(channelID int64) error {
 
 	_, err = s.bot.Send(
 		chat,
-		s.layout.TextLocale("ru", "bot_started",
-			struct {
-				Name        string
-				Description string
-				BuildDate   string
-				StartTime   string
-			}{
-				Name:        prName,
-				Description: prDesc,
-				BuildDate:   buildDate,
-				StartTime:   time.Now().Format("2006-01-02 15:04:05"),
-			}),
+		s.layout.TextLocale("ru", "bot_started", struct {
+			Name      string
+			URL       string
+			BuildDate string
+			StartTime string
+		}{
+			Name:      prName,
+			URL:       prURL,
+			BuildDate: buildDate,
+			StartTime: time.Now().Format("2006-01-02 15:04:05"),
+		}),
 	)
 	if err != nil {
 		return fmt.Errorf("failed to send startup notification: %w", err)

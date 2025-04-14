@@ -5,9 +5,8 @@ bot_started: |-
   <i>Название:</i> {{.Name}}
   <i>Дата сборки:</i> {{.BuildDate}}
   <i>Дата запуска:</i> {{.StartTime}}
-  {{if .Description}}<blockquote><b>Описание:</b>
-  {{html .Description}}
-  </blockquote>{{end}}
+  
+  {{if .URL}}<a href="{{.URL}}">Подробнее</a>{{end}}
 
 start: |-
   <b>Воспользуйтесь кнопкой ниже для перехода к главному меню</b>
