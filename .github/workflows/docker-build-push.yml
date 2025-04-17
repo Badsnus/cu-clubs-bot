@@ -84,7 +84,7 @@ jobs:
               const prUrl = pullRequest.html_url;
 
               core.setOutput('pr_name', pullRequest.title);
-              core.setOutput('pr_url', prUrl); // Set PR URL output
+              core.setOutput('pr_url', ${prUrl}); // Set PR URL output
               core.setOutput('pr_number', prNumber);
               console.log(`Found PR #${prNumber}: ${pullRequest.title} (${prUrl})`);
             } else {
