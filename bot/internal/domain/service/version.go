@@ -63,6 +63,12 @@ func (s *VersionService) SendStartupNotification(channelID int64) error {
 	prURL := versionInfo["pr_url"]
 	buildDate := versionInfo["build_date"]
 
+	// Log the values before sending
+	s.logger.Infow("Notification details:",
+		"pr_name:", prName,
+		"pr_url:", prURL,
+		"build_date:", buildDate)
+
 	chat, err := s.bot.ChatByID(channelID)
 	if err != nil {
 		return fmt.Errorf("failed to get chat by ID %d: %w", channelID, err)

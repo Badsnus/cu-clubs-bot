@@ -2,12 +2,6 @@ services:
   bot:
     container_name: bot
     image: ${REGISTRY_URL}/${GITHUB_REPOSITORY}:${TAG:-main}
-    build:
-      context: ./bot
-      args:
-        PR_NAME: ${PR_NAME:-Unknown}
-        PR_URL: ${PR_URL}
-        BUILD_DATE: ${BUILD_DATE:-Unknown}
     depends_on:
       - redis
     volumes:
