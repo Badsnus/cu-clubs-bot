@@ -42,8 +42,8 @@ func (s *VersionService) GetVersionInfo() map[string]string {
 	info["pr_name"] = prName
 
 	// Get PR url from environment variable
-	prUrl := os.Getenv("BOT_PR_URL")
-	info["pr_url"] = prUrl
+	prURL := os.Getenv("BOT_PR_URL")
+	info["pr_url"] = prURL
 
 	// Get build date from environment variable
 	buildDate := os.Getenv("BOT_BUILD_DATE")
