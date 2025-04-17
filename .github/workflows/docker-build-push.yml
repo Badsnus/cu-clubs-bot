@@ -84,7 +84,7 @@ jobs:
               const prUrl = pullRequest.html_url;
 
               core.setOutput('pr_name', pullRequest.title);
-              core.setOutput('pr_url', ${prUrl}); // Set PR URL output
+              core.setOutput('pr_url', prUrl); // Set PR URL output
               core.setOutput('pr_number', prNumber);
               console.log(`Found PR #${prNumber}: ${pullRequest.title} (${prUrl})`);
             } else {
@@ -119,8 +119,8 @@ jobs:
           push: true
           tags: ghcr.io/${{ steps.repo-name.outputs.name }}:${{ github.ref_name }}
           build-args: |
-            PR_NAME="${{ steps.pr-info.outputs.pr_name }}"
-            PR_URL="${{ steps.pr-info.outputs.pr_url }}"
-            BUILD_DATE="${{ steps.version-info.outputs.build_date }}"
+            PR_NAME=${{ steps.pr-info.outputs.pr_name }}
+            PR_URL=${{ steps.pr-info.outputs.pr_url }}
+            BUILD_DATE=${{ steps.version-info.outputs.build_date }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
