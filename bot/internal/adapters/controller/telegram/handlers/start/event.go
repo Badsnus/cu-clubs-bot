@@ -133,6 +133,15 @@ func (h Handler) eventRegister(c tele.Context) error {
 		)
 	}
 
+	club, err := h.clubService.Get(context.Background(), event.ClubID)
+	if err != nil {
+		h.logger.Errorf("(user: %d) error while get club: %v", c.Sender().ID, err)
+		return c.Edit(
+			banner.Events.Caption(h.layout.Text(c, "technical_issues", err.Error())),
+			h.layout.Markup(c, "mainMenu:back"),
+		)
+	}
+
 	var registered bool
 	_, errGetParticipant := h.eventParticipantService.Get(context.Background(), eventID, c.Sender().ID)
 	if errGetParticipant != nil {
@@ -255,6 +264,7 @@ func (h Handler) eventRegister(c tele.Context) error {
 	_ = c.Edit(
 		banner.Events.Caption(h.layout.Text(c, "event_text", struct {
 			Name                  string
+			ClubName              string
 			Description           string
 			Location              string
 			StartTime             string
@@ -265,6 +275,7 @@ func (h Handler) eventRegister(c tele.Context) error {
 			IsRegistered          bool
 		}{
 			Name:                  event.Name,
+			ClubName:              club.Name,
 			Description:           event.Description,
 			Location:              event.Location,
 			StartTime:             event.StartTime.In(location.Location()).Format("02.01.2006 15:04"),
