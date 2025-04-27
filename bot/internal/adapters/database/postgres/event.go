@@ -171,7 +171,7 @@ func (s *EventStorage) Delete(ctx context.Context, id string) error {
 func (s *EventStorage) Count(ctx context.Context, role string) (int64, error) {
 	var count int64
 	query := s.db.WithContext(ctx).Model(&entity.Event{}).
-		Where("registration_end > ?", time.Now()).
+		Where("registration_end > ?", time.Now().In(location.Location())).
 		Where("? = ANY(allowed_roles)", role)
 
 	err := query.Count(&count).Error
@@ -193,7 +193,7 @@ func (s *EventStorage) GetWithPagination(ctx context.Context, limit, offset int,
 	// Create the base query with all conditions
 	baseQuery := s.db.WithContext(ctx).
 		Model(&entity.Event{}). // Use Model() to ensure deleted_at IS NULL filter
-		Where("registration_end > ?", time.Now())
+		Where("registration_end > ?", time.Now().In(location.Location()))
 
 	// Apply role filtering if specified
 	if role != "" {

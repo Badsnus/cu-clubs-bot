@@ -94,7 +94,7 @@ func Get() *Config {
 	if err != nil {
 		logger.Log.Panicf("Failed to connect to the database: %v", err)
 	} else {
-		logger.Log.Info("Successfully connected to the database")
+		logger.Log.Infof("Successfully connected to the database (%s)", viper.GetString("service.database.name"))
 	}
 
 	errMigrate := database.AutoMigrate(postgresStorage.Migrations...)
