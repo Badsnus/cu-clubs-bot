@@ -167,6 +167,7 @@ func (s *EventParticipantService) checkAndSend(ctx context.Context) {
 
 	var eventIDs []string
 	var clubsIDs []string
+	var eventStartDate time.Time
 
 	for _, event := range events {
 		eventStartTime := event.StartTime.In(location.Location())
@@ -186,6 +187,7 @@ func (s *EventParticipantService) checkAndSend(ctx context.Context) {
 		if (strings.Contains(event.Location, "Гашека 7")) && !(now.Before(notificationTime) || now.After(notificationTime.Add(1*time.Hour))) {
 			eventIDs = append(eventIDs, event.ID)
 			clubsIDs = append(clubsIDs, event.ClubID)
+			eventStartTime = event.StartTime
 		}
 	}
 
@@ -224,7 +226,7 @@ func (s *EventParticipantService) checkAndSend(ctx context.Context) {
 		return
 	}
 
-	message := fmt.Sprintf("Внешние гости_%s_%s", clubsNameStr, time.Now().Format("02.01.2006"))
+	message := fmt.Sprintf("Внешние гости_%s_%s", clubsNameStr, eventStartDate.Format("02.01.2006"))
 
 	for _, passEmail := range s.passEmails {
 		s.eventParticipantSMTPClient.Send(passEmail, message, message, message, buf)
