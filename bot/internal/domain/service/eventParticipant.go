@@ -187,7 +187,7 @@ func (s *EventParticipantService) checkAndSend(ctx context.Context) {
 		if (strings.Contains(event.Location, "Гашека 7")) && !(now.Before(notificationTime) || now.After(notificationTime.Add(1*time.Hour))) {
 			eventIDs = append(eventIDs, event.ID)
 			clubsIDs = append(clubsIDs, event.ClubID)
-			eventStartTime = event.StartTime
+			eventStartDate = event.StartTime.In(location.Location())
 		}
 	}
 
