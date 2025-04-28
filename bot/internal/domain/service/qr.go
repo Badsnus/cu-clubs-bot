@@ -52,10 +52,9 @@ func (s *QrService) GetUserQR(ctx context.Context, userID int64) (qr tele.File, 
 	}
 	if user.QRFileID != "" {
 		qr, err = s.bot.FileByID(user.QRFileID)
-		if err != nil {
-			return qr, err
+		if err == nil {
+			return qr, nil
 		}
-		return qr, nil
 	}
 
 	qrCodeID := uuid.New().String()

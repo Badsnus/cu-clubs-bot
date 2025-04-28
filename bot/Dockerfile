@@ -5,8 +5,6 @@ ARG PR_NAME="Unknown"
 ARG PR_URL=""
 ARG BUILD_DATE="Unknown"
 
-RUN apk update && apk add ca-certificates
-
 WORKDIR /opt
 
 COPY go.mod go.sum ./
@@ -14,7 +12,7 @@ RUN go mod download && go mod verify
 
 COPY . .
 
-RUN go build -o bin/bot ./cmd
+RUN go build -o "bin/bot" "./cmd"
 
 FROM alpine:3.19 AS runner
 
@@ -27,8 +25,6 @@ ARG BUILD_DATE
 ENV BOT_PR_NAME=${PR_NAME}
 ENV BOT_PR_URL=${PR_URL}
 ENV BOT_BUILD_DATE=${BUILD_DATE}
-
-RUN apk update && apk add ca-certificates libc6-compat openssh bash && rm -rf /var/cache/apk/*
 
 WORKDIR /opt
 
