@@ -74,6 +74,13 @@ func (h Handler) eventMenu(c tele.Context, eventID string) error {
 		registered = true
 	}
 
+	if !registered {
+		return c.Send(
+			banner.Events.Caption(h.layout.Text(c, "registration_ended")),
+			h.layout.Markup(c, "mainMenu:back"),
+		)
+	}
+
 	endTime := event.EndTime.In(location.Location()).Format("02.01.2006 15:04")
 	if event.EndTime.Year() == 1 {
 		endTime = ""
