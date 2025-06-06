@@ -7,6 +7,7 @@ import (
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/utils"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/utils/banner"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/utils/location"
+	"github.com/spf13/viper"
 	tele "gopkg.in/telebot.v3"
 	"gorm.io/gorm"
 	"time"
@@ -18,10 +19,17 @@ func (h Handler) eventMenu(c tele.Context, eventID string) error {
 
 	user, err := h.userService.Get(context.Background(), c.Sender().ID)
 	if err != nil {
-		h.logger.Errorf("(user: %d) error while get user: %v", c.Sender().ID, err)
+		if !errors.Is(err, gorm.ErrRecordNotFound) {
+			h.logger.Errorf("(user: %d) error while get user: %v", c.Sender().ID, err)
+			return c.Send(
+				banner.Events.Caption(h.layout.Text(c, "technical_issues", err.Error())),
+				h.layout.Markup(c, "mainMenu:back"),
+			)
+		}
+		h.eventsStorage.SetEventID(c.Sender().ID, "before-reg-event-id", eventID, viper.GetDuration("bot.session.event-id-ttl"))
 		return c.Send(
-			banner.Events.Caption(h.layout.Text(c, "technical_issues", err.Error())),
-			h.layout.Markup(c, "mainMenu:back"),
+			banner.Auth.Caption(h.layout.Text(c, "auth_required")),
+			h.layout.Markup(c, "core:hide"),
 		)
 	}
 
@@ -64,6 +72,13 @@ func (h Handler) eventMenu(c tele.Context, eventID string) error {
 		}
 	} else {
 		registered = true
+	}
+
+	if !registered {
+		return c.Send(
+			banner.Events.Caption(h.layout.Text(c, "registration_ended")),
+			h.layout.Markup(c, "mainMenu:back"),
+		)
 	}
 
 	endTime := event.EndTime.In(location.Location()).Format("02.01.2006 15:04")
