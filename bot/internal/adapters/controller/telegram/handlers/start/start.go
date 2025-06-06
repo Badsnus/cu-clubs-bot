@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/database/redis/callbacks"
+	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/database/redis/events"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/utils/banner"
 	qr "github.com/Badsnus/cu-clubs-bot/bot/pkg/qrcode"
 	"github.com/spf13/viper"
@@ -77,6 +78,7 @@ type Handler struct {
 
 	codesStorage  *codes.Storage
 	emailsStorage *emails.Storage
+	eventsStorage *events.Storage
 	layout        *layout.Layout
 	logger        *types.Logger
 }
@@ -117,6 +119,7 @@ func New(b *bot.Bot) *Handler {
 		menuHandler:             menu.New(b),
 		codesStorage:            b.Redis.Codes,
 		emailsStorage:           b.Redis.Emails,
+		eventsStorage:           b.Redis.Events,
 		layout:                  b.Layout,
 		logger:                  b.Logger,
 	}

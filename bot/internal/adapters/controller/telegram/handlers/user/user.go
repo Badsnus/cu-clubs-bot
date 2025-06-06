@@ -10,6 +10,7 @@ import (
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/database/postgres"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/database/redis/codes"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/database/redis/emails"
+	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/database/redis/events"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/common/errorz"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/dto"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/entity"
@@ -81,6 +82,7 @@ type Handler struct {
 
 	codesStorage  *codes.Storage
 	emailsStorage *emails.Storage
+	eventsStorage *events.Storage
 	input         *intele.InputManager
 	layout        *layout.Layout
 	logger        *types.Logger
@@ -135,6 +137,7 @@ func New(b *bot.Bot) *Handler {
 		menuHandler:   menu.New(b),
 		codesStorage:  b.Redis.Codes,
 		emailsStorage: b.Redis.Emails,
+		eventsStorage: b.Redis.Events,
 		layout:        b.Layout,
 		input:         b.Input,
 		logger:        b.Logger,
