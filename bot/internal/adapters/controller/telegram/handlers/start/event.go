@@ -74,13 +74,6 @@ func (h Handler) eventMenu(c tele.Context, eventID string) error {
 		registered = true
 	}
 
-	if !registered {
-		return c.Send(
-			banner.Events.Caption(h.layout.Text(c, "registration_ended")),
-			h.layout.Markup(c, "mainMenu:back"),
-		)
-	}
-
 	endTime := event.EndTime.In(location.Location()).Format("02.01.2006 15:04")
 	if event.EndTime.Year() == 1 {
 		endTime = ""
@@ -95,6 +88,20 @@ func (h Handler) eventMenu(c tele.Context, eventID string) error {
 		} else {
 			maxRegistrationEnd = utils.GetMaxRegisteredEndTime(event.StartTime)
 		}
+	}
+
+	var registrationActive bool
+	if user.Role == entity.Student {
+		registrationActive = event.RegistrationEnd.After(time.Now().In(location.Location()))
+	} else {
+		registrationActive = utils.GetMaxRegisteredEndTime(event.StartTime).After(time.Now().In(location.Location())) && event.RegistrationEnd.After(time.Now().In(location.Location()))
+	}
+
+	if !registrationActive && !registered {
+		return c.Send(
+			banner.Events.Caption(h.layout.Text(c, "registration_ended")),
+			h.layout.Markup(c, "mainMenu:back"),
+		)
 	}
 
 	_ = c.Send(
