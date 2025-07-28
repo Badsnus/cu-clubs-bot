@@ -3,7 +3,7 @@ package menu
 import (
 	"context"
 	"github.com/Badsnus/cu-clubs-bot/bot/cmd/bot"
-	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/database/postgres"
+	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/database/postgres/repository"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/entity"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/service"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/utils"
@@ -25,7 +25,7 @@ type Handler struct {
 }
 
 func New(b *bot.Bot) *Handler {
-	clubStorage := postgres.NewClubStorage(b.DB)
+	clubStorage := repository.NewClubStorage(b.DB)
 
 	return &Handler{
 		clubService: service.NewClubService(clubStorage),

@@ -8,7 +8,7 @@ import (
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/controller/telegram/handlers/middlewares"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/controller/telegram/handlers/start"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/controller/telegram/handlers/user"
-	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/database/postgres"
+	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/database/postgres/repository"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/service"
 	"github.com/Badsnus/cu-clubs-bot/bot/pkg/logger"
 	"github.com/Badsnus/cu-clubs-bot/bot/pkg/smtp"
@@ -27,19 +27,19 @@ func Setup(b *bot.Bot) {
 		b.Bot,
 		b.Layout,
 		notifyLogger,
-		service.NewClubOwnerService(postgres.NewClubOwnerStorage(b.DB), postgres.NewUserStorage(b.DB)),
-		postgres.NewEventStorage(b.DB),
-		postgres.NewNotificationStorage(b.DB),
+		service.NewClubOwnerService(repository.NewClubOwnerStorage(b.DB), repository.NewUserStorage(b.DB)),
+		repository.NewEventStorage(b.DB),
+		repository.NewNotificationStorage(b.DB),
 		nil,
 	)
 	eventParticipantService := service.NewEventParticipantService(
 		b.Bot,
 		b.Layout,
 		b.Logger,
-		postgres.NewEventParticipantStorage(b.DB),
-		postgres.NewEventStorage(b.DB),
-		postgres.NewUserStorage(b.DB),
-		postgres.NewClubStorage(b.DB),
+		repository.NewEventParticipantStorage(b.DB),
+		repository.NewEventStorage(b.DB),
+		repository.NewUserStorage(b.DB),
+		repository.NewClubStorage(b.DB),
 		smtp.NewClient(b.SMTPDialer, viper.GetString("service.smtp.domain"), viper.GetString("service.smtp.email")),
 		viper.GetStringSlice("settings.pass-emails"),
 		viper.GetInt64("bot.pass.channel-id"),

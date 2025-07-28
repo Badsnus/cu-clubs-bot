@@ -3,6 +3,7 @@ package middlewares
 import (
 	"context"
 	"errors"
+	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/database/postgres/repository"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/utils/banner"
 	"strings"
 
@@ -11,7 +12,6 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/Badsnus/cu-clubs-bot/bot/cmd/bot"
-	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/database/postgres"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/entity"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/service"
 	tele "gopkg.in/telebot.v3"
@@ -38,9 +38,9 @@ type Handler struct {
 }
 
 func New(b *bot.Bot) *Handler {
-	userStorageLocal := postgres.NewUserStorage(b.DB)
+	userStorageLocal := repository.NewUserStorage(b.DB)
 	userServiceLocal := service.NewUserService(userStorageLocal, nil, nil, nil, "")
-	clubStorage := postgres.NewClubStorage(b.DB)
+	clubStorage := repository.NewClubStorage(b.DB)
 
 	return &Handler{
 		bot:         b.Bot,

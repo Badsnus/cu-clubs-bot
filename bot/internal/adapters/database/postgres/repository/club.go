@@ -1,8 +1,7 @@
-package postgres
+package repository
 
 import (
 	"context"
-
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/entity"
 	"gorm.io/gorm"
 )
@@ -19,6 +18,8 @@ func NewClubStorage(db *gorm.DB) *ClubStorage {
 
 func (s *ClubStorage) Create(ctx context.Context, club *entity.Club) (*entity.Club, error) {
 	err := s.db.WithContext(ctx).Create(&club).Error
+	//client, _ := ent.Open()
+	//client.User.Query().Where()
 	return club, err
 }
 

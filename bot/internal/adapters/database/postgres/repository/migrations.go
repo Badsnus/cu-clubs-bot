@@ -1,4 +1,4 @@
-package postgres
+package repository
 
 import "github.com/Badsnus/cu-clubs-bot/bot/internal/domain/entity"
 

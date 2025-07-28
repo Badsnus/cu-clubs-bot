@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/database/postgres/repository"
 	"github.com/xuri/excelize/v2"
 	"slices"
 	"strconv"
@@ -14,7 +15,6 @@ import (
 
 	"github.com/Badsnus/cu-clubs-bot/bot/cmd/bot"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/controller/telegram/handlers/middlewares"
-	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/database/postgres"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/database/redis/events"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/common/errorz"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/dto"
@@ -94,11 +94,11 @@ type Handler struct {
 }
 
 func NewHandler(b *bot.Bot) *Handler {
-	clubStorage := postgres.NewClubStorage(b.DB)
-	clubOwnerStorage := postgres.NewClubOwnerStorage(b.DB)
-	userStorage := postgres.NewUserStorage(b.DB)
-	eventStorage := postgres.NewEventStorage(b.DB)
-	eventParticipantStorage := postgres.NewEventParticipantStorage(b.DB)
+	clubStorage := repository.NewClubStorage(b.DB)
+	clubOwnerStorage := repository.NewClubOwnerStorage(b.DB)
+	userStorage := repository.NewUserStorage(b.DB)
+	eventStorage := repository.NewEventStorage(b.DB)
+	eventParticipantStorage := repository.NewEventParticipantStorage(b.DB)
 
 	eventSrvc := service.NewEventService(eventStorage)
 

@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"github.com/Badsnus/cu-clubs-bot/bot/cmd/bot"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/controller/telegram/handlers/menu"
-	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/database/postgres"
+	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/database/postgres/repository"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/database/redis/codes"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/database/redis/emails"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/database/redis/events"
@@ -89,13 +89,13 @@ type Handler struct {
 }
 
 func New(b *bot.Bot) *Handler {
-	userStorage := postgres.NewUserStorage(b.DB)
-	studentDataStorage := postgres.NewStudentDataStorage(b.DB)
-	eventStorage := postgres.NewEventStorage(b.DB)
-	eventParticipantStorage := postgres.NewEventParticipantStorage(b.DB)
-	clubOwnerStorage := postgres.NewClubOwnerStorage(b.DB)
+	userStorage := repository.NewUserStorage(b.DB)
+	studentDataStorage := repository.NewStudentDataStorage(b.DB)
+	eventStorage := repository.NewEventStorage(b.DB)
+	eventParticipantStorage := repository.NewEventParticipantStorage(b.DB)
+	clubOwnerStorage := repository.NewClubOwnerStorage(b.DB)
 
-	clubStorage := postgres.NewClubStorage(b.DB)
+	clubStorage := repository.NewClubStorage(b.DB)
 
 	eventPartService := service.NewEventParticipantService(nil, nil, nil, eventParticipantStorage, nil, nil, nil, nil, nil, 0)
 

@@ -425,16 +425,6 @@ buttons:
     callback_data: '{{.ID}} {{.Page}}'
     text: '{{ text `delete` }}'
 
-  admin:club:add_owner:
-    unique: admin_club_addOwner
-    callback_data: '{{.ID}} {{.Page}}'
-    text: '{{ text `add_club_owner` }}'
-
-  admin:club:del_owner:
-    unique: admin_club_delOwner
-    callback_data: '{{.ID}} {{.Page}}'
-    text: '{{ text `remove_club_owner` }}'
-
   admin:club:back:
     unique: admin_club_back
     callback_data: '{{.ID}} {{.Page}}'
@@ -547,6 +537,7 @@ markups:
   admin:club:menu:
     - [ admin:club:add_owner ]
     - [ admin:club:del_owner ]
+    - [ admin:club:api ]
     - [ admin:club:qr_allowed ]
     - [ admin:club:roles ]
     - [ admin:club:delete ]

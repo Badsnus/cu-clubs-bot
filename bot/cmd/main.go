@@ -6,6 +6,7 @@ import (
 	setupBot "github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/controller/telegram/setup"
 	"log"
 
+	_ "github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/database/postgres/ent/runtime"
 	_ "time/tzdata"
 )
 

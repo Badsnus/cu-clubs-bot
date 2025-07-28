@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	postgresStorage "github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/database/postgres/repository"
 	"log"
 	"os"
 	"time"
@@ -11,7 +12,6 @@ import (
 
 	"gopkg.in/gomail.v2"
 
-	postgresStorage "github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/database/postgres"
 	"github.com/Badsnus/cu-clubs-bot/bot/pkg/logger"
 	"github.com/spf13/viper"
 	"gorm.io/driver/postgres"

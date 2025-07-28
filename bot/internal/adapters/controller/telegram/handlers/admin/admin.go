@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"github.com/Badsnus/cu-clubs-bot/bot/cmd/bot"
-	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/database/postgres"
+	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/database/postgres/repository"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/common/errorz"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/dto"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/entity"
@@ -58,9 +58,9 @@ type Handler struct {
 }
 
 func New(b *bot.Bot) *Handler {
-	userStorage := postgres.NewUserStorage(b.DB)
-	clubStorage := postgres.NewClubStorage(b.DB)
-	clubOwnerStorage := postgres.NewClubOwnerStorage(b.DB)
+	userStorage := repository.NewUserStorage(b.DB)
+	clubStorage := repository.NewClubStorage(b.DB)
+	clubOwnerStorage := repository.NewClubOwnerStorage(b.DB)
 
 	return &Handler{
 		layout:           b.Layout,

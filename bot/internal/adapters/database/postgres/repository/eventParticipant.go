@@ -1,4 +1,4 @@
-package postgres
+package repository
 
 import (
 	"context"
@@ -22,7 +22,6 @@ func NewEventParticipantStorage(db *gorm.DB) *EventParticipantStorage {
 
 func (s *EventParticipantStorage) Create(ctx context.Context, eventParticipant *entity.EventParticipant) (*entity.EventParticipant, error) {
 	err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		// Check if event exists
 		var eventExists int64
 		if err := tx.Model(&entity.Event{}).Where("id = ?", eventParticipant.EventID).Count(&eventExists).Error; err != nil {
 			return err
@@ -31,7 +30,6 @@ func (s *EventParticipantStorage) Create(ctx context.Context, eventParticipant *
 			return fmt.Errorf("event with id %s not found", eventParticipant.EventID)
 		}
 
-		// Check if user exists
 		var userExists int64
 		if err := tx.Model(&entity.User{}).Where("id = ?", eventParticipant.UserID).Count(&userExists).Error; err != nil {
 			return err
@@ -40,7 +38,6 @@ func (s *EventParticipantStorage) Create(ctx context.Context, eventParticipant *
 			return fmt.Errorf("user with id %d not found", eventParticipant.UserID)
 		}
 
-		// Create participant
 		return tx.Create(&eventParticipant).Error
 	})
 

@@ -3,6 +3,7 @@ package start
 import (
 	"context"
 	"errors"
+	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/database/postgres/repository"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/database/redis/callbacks"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/database/redis/events"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/utils/banner"
@@ -13,7 +14,6 @@ import (
 
 	"github.com/Badsnus/cu-clubs-bot/bot/cmd/bot"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/controller/telegram/handlers/menu"
-	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/database/postgres"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/database/redis/codes"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/database/redis/emails"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/entity"
@@ -84,13 +84,13 @@ type Handler struct {
 }
 
 func New(b *bot.Bot) *Handler {
-	userStorage := postgres.NewUserStorage(b.DB)
-	studentDataStorage := postgres.NewStudentDataStorage(b.DB)
-	eventStorage := postgres.NewEventStorage(b.DB)
-	clubStorage := postgres.NewClubStorage(b.DB)
-	eventParticipantStorage := postgres.NewEventParticipantStorage(b.DB)
-	clubOwnerStorage := postgres.NewClubOwnerStorage(b.DB)
-	notificationStorage := postgres.NewNotificationStorage(b.DB)
+	userStorage := repository.NewUserStorage(b.DB)
+	studentDataStorage := repository.NewStudentDataStorage(b.DB)
+	eventStorage := repository.NewEventStorage(b.DB)
+	clubStorage := repository.NewClubStorage(b.DB)
+	eventParticipantStorage := repository.NewEventParticipantStorage(b.DB)
+	clubOwnerStorage := repository.NewClubOwnerStorage(b.DB)
+	notificationStorage := repository.NewNotificationStorage(b.DB)
 
 	userSrvc := service.NewUserService(userStorage, studentDataStorage, nil, nil, "")
 	eventSrvc := service.NewEventService(eventStorage)
