@@ -148,6 +148,15 @@ func (h Handler) Hide(c tele.Context) error {
 	return c.Delete()
 }
 
+func (h Handler) personalAccount(c tele.Context) error {
+	h.logger.Infof("(user: %d getting personal account", c.Sender().ID)
+
+	return c.Edit(
+		banner.PersonalAccount.Caption(h.layout.Text(c, "personal_account_text")),
+		h.layout.Markup(c, "personalAccount:menu"),
+	)
+}
+
 func (h Handler) qrCode(c tele.Context) error {
 	h.logger.Infof("(user: %d) requested QR code", c.Sender().ID)
 
@@ -156,9 +165,10 @@ func (h Handler) qrCode(c tele.Context) error {
 	file, err := h.qrService.GetUserQR(context.Background(), c.Sender().ID)
 	if err != nil {
 		h.logger.Errorf("(user: %d) error while getting user QR code: %v", c.Sender().ID, err)
+		_ = c.Bot().Delete(loading)
 		return c.Edit(
 			banner.Menu.Caption(h.layout.Text(c, "technical_issues", err.Error())),
-			h.layout.Markup(c, "mainMenu:back"),
+			h.layout.Markup(c, "personalAccount:back"),
 		)
 	}
 	_ = c.Bot().Delete(loading)
@@ -168,7 +178,7 @@ func (h Handler) qrCode(c tele.Context) error {
 			File:    file,
 			Caption: h.layout.Text(c, "qr_text"),
 		},
-		h.layout.Markup(c, "mainMenu:back"),
+		h.layout.Markup(c, "personalAccount:back"),
 	)
 }
 
@@ -858,7 +868,7 @@ func (h Handler) myEvents(c tele.Context) error {
 		rows        []tele.Row
 		menuRow     tele.Row
 	)
-	if c.Callback().Unique != "mainMenu_myEvents" {
+	if c.Callback().Unique != "personalAccount_myEvents" {
 		p, err = strconv.Atoi(c.Callback().Data)
 		if err != nil {
 			return errorz.ErrInvalidCallbackData
@@ -870,7 +880,7 @@ func (h Handler) myEvents(c tele.Context) error {
 		h.logger.Errorf("(user: %d) error while getting user from db: %v", c.Sender().ID, err)
 		return c.Edit(
 			banner.Events.Caption(h.layout.Text(c, "technical_issues", err.Error())),
-			h.layout.Markup(c, "mainMenu:back"),
+			h.layout.Markup(c, "personalAccount:back"),
 		)
 	}
 
@@ -879,7 +889,7 @@ func (h Handler) myEvents(c tele.Context) error {
 		h.logger.Errorf("(user: %d) error while get events count: %v", c.Sender().ID, err)
 		return c.Edit(
 			banner.Events.Caption(h.layout.Text(c, "technical_issues", err.Error())),
-			h.layout.Markup(c, "mainMenu:back"),
+			h.layout.Markup(c, "personalAccount:back"),
 		)
 	}
 
@@ -894,7 +904,7 @@ func (h Handler) myEvents(c tele.Context) error {
 		)
 		return c.Edit(
 			banner.Events.Caption(h.layout.Text(c, "technical_issues", err.Error())),
-			h.layout.Markup(c, "mainMenu:back"),
+			h.layout.Markup(c, "personalAccount:back"),
 		)
 	}
 
@@ -951,7 +961,7 @@ func (h Handler) myEvents(c tele.Context) error {
 	rows = append(
 		rows,
 		menuRow,
-		markup.Row(*h.layout.Button(c, "mainMenu:back")),
+		markup.Row(*h.layout.Button(c, "personalAccount:back")),
 	)
 
 	markup.Inline(rows...)
@@ -1148,7 +1158,7 @@ func (h Handler) mailingSwitch(c tele.Context) error {
 }
 
 func (h Handler) UserSetup(group *tele.Group) {
-	group.Handle(h.layout.Callback("mainMenu:qr"), h.qrCode)
+	// group.Handle(h.layout.Callback("mainMenu:cuClubs"), h.cuClubs)
 
 	group.Handle(h.layout.Callback("mainMenu:events"), h.eventsList)
 	group.Handle(h.layout.Callback("user:events:prev_page"), h.eventsList)
@@ -1160,11 +1170,14 @@ func (h Handler) UserSetup(group *tele.Group) {
 	group.Handle(h.layout.Callback("user:myEvents:event:cancel_registration"), h.myEventCancelRegistration)
 	group.Handle(h.layout.Callback("user:events:event:register"), h.event)
 
-	group.Handle(h.layout.Callback("mainMenu:my_events"), h.myEvents)
+	group.Handle(h.layout.Callback("mainMenu:personalAccount"), h.personalAccount)
+	group.Handle(h.layout.Callback("personalAccount:my_events"), h.myEvents)
+	group.Handle(h.layout.Callback("personalAccount:qr"), h.qrCode)
 	group.Handle(h.layout.Callback("user:myEvents:prev_page"), h.myEvents)
 	group.Handle(h.layout.Callback("user:myEvents:next_page"), h.myEvents)
 	group.Handle(h.layout.Callback("user:myEvents:event"), h.myEvent)
 	group.Handle(h.layout.Callback("user:myEvents:back"), h.myEvents)
+	group.Handle(h.layout.Callback("personalAccount:back"), h.personalAccount)
 
 	group.Handle(h.layout.Callback("mailing:switch"), h.mailingSwitch)
 }

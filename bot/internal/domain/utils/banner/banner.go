@@ -8,10 +8,11 @@ import (
 type Banner tele.File
 
 var (
-	Auth      Banner
-	Menu      Banner
-	ClubOwner Banner
-	Events    Banner
+	Auth            Banner
+	Menu            Banner
+	PersonalAccount Banner
+	ClubOwner       Banner
+	Events          Banner
 
 	loaded bool
 )
@@ -31,6 +32,12 @@ func Load(b *tele.Bot) error {
 		return err
 	}
 	Menu = Banner(menu)
+
+	personalAccount, err := b.FileByID(viper.GetString("bot.banner.personal-account"))
+	if err != nil {
+		return err
+	}
+	PersonalAccount = Banner(personalAccount)
 
 	clubOwner, err := b.FileByID(viper.GetString("bot.banner.club-owner"))
 	if err != nil {

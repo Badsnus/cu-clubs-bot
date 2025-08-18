@@ -56,13 +56,13 @@ buttons:
     unique: mainMenu_events
     text: '{{ text `events` }}'
 
-  mainMenu:my_events:
-    unique: mainMenu_myEvents
-    text: '{{ text `my_events` }}'
+#  mainMenu:my_events:
+#    unique: mainMenu_myEvents
+#    text: '{{ text `my_events` }}'
 
-  mainMenu:qr:
-    unique: mainMenu_qr
-    text: '{{ text `qr` }}'
+#  mainMenu:qr:
+#    unique: mainMenu_qr
+#    text: '{{ text `qr` }}'
 
   mainMenu:my_clubs:
     unique: mainMenu_myClubs
@@ -74,6 +74,18 @@ buttons:
 
   mainMenu:back:
     unique: mainMenu_back
+    text: '{{ text `back` }}'
+
+  personalAccount:my_events:
+    unique: personalAccount_myEvents
+    text: '{{ text `my_events` }}'
+
+  personalAccount:qr:
+    unique: personalAccount_qr
+    text: '{{ text `qr` }}'
+
+  personalAccount:back:
+    unique: personalAccount_back
     text: '{{ text `back` }}'
 
   user:events:event:
@@ -440,6 +452,17 @@ buttons:
     callback_data: '{{.ID}} {{.Page}}'
     text: '{{ text `back` }}'
 
+  # cu clubs tour functionality
+  mainMenu:cuClubs:
+    unique: mainMenu_cuClubs
+    callback_data: cuClubs:clubs
+    text: '{{ text `cu_clubs` }}'
+
+  mainMenu:personalAccount:
+    unique: mainMenu_personalAccount
+    callback_data: mainMenu_personalAccount
+    text: '{{ text `personal_account` }}'
+
 
 markups:
   core:hide:
@@ -459,9 +482,12 @@ markups:
     - [ auth:resend_email ]
     - [ auth:back_to_menu ]
 
+#  mainMenu:menu:
+#    - [ mainMenu:events, mainMenu:my_events ]
+#    - [ mainMenu:qr ]
   mainMenu:menu:
-    - [ mainMenu:events, mainMenu:my_events ]
-    - [ mainMenu:qr ]
+    - [ mainMenu:events ]
+    - [ mainMenu:personalAccount ]
   mainMenu:back:
     - [ mainMenu:back ]
 
@@ -469,6 +495,12 @@ markups:
     - [ mailing:switch ]
     - [ core:hide ]
 
+  personalAccount:menu:
+    - [ personalAccount:my_events ]
+    - [ personalAccount:qr ]
+    - [ mainMenu:back ]
+  personalAccount:back:
+    - [ personalAccount:back ]
   user:events:back:
     - [ user:events:back ]
   user:events:event:

@@ -39,9 +39,6 @@ func (h Handler) SendMenu(c tele.Context) error {
 	isAdmin := utils.IsAdmin(c.Sender().ID)
 
 	menuMarkup := h.layout.Markup(c, "mainMenu:menu")
-	if isAdmin {
-		menuMarkup.InlineKeyboard = append(menuMarkup.InlineKeyboard, []tele.InlineButton{*h.layout.Button(c, "mainMenu:admin_menu").Inline()})
-	}
 
 	userClubs, err := h.clubService.GetByOwnerID(context.Background(), c.Sender().ID)
 	if err != nil {
@@ -52,17 +49,21 @@ func (h Handler) SendMenu(c tele.Context) error {
 		)
 	}
 
-	if len(userClubs) == 1 {
-		menuMarkup.InlineKeyboard = append(menuMarkup.InlineKeyboard, []tele.InlineButton{*h.layout.Button(c, "clubOwner:myClubs:club", struct {
-			ID   string
-			Name string
-		}{
-			ID:   userClubs[0].ID,
-			Name: userClubs[0].Name,
-		}).Inline()})
-	}
-	if len(userClubs) > 1 {
+	//if len(userClubs) == 1 {
+	//	menuMarkup.InlineKeyboard = append(menuMarkup.InlineKeyboard, []tele.InlineButton{*h.layout.Button(c, "clubOwner:myClubs:club", struct {
+	//		ID   string
+	//		Name string
+	//	}{
+	//		ID:   userClubs[0].ID,
+	//		Name: userClubs[0].Name,
+	//	}).Inline()})
+	//}
+	if len(userClubs) > 0 {
 		menuMarkup.InlineKeyboard = append(menuMarkup.InlineKeyboard, []tele.InlineButton{*h.layout.Button(c, "clubOwner:my_clubs").Inline()})
+	}
+
+	if isAdmin {
+		menuMarkup.InlineKeyboard = append(menuMarkup.InlineKeyboard, []tele.InlineButton{*h.layout.Button(c, "mainMenu:admin_menu").Inline()})
 	}
 
 	h.logger.Infof("(user: %d) send main menu (isAdmin=%t)", c.Sender().ID, isAdmin)
@@ -76,9 +77,6 @@ func (h Handler) EditMenu(c tele.Context) error {
 	isAdmin := utils.IsAdmin(c.Sender().ID)
 
 	menuMarkup := h.layout.Markup(c, "mainMenu:menu")
-	if isAdmin {
-		menuMarkup.InlineKeyboard = append(menuMarkup.InlineKeyboard, []tele.InlineButton{*h.layout.Button(c, "mainMenu:admin_menu").Inline()})
-	}
 
 	userClubs, err := h.clubService.GetByOwnerID(context.Background(), c.Sender().ID)
 	if err != nil {
@@ -89,17 +87,24 @@ func (h Handler) EditMenu(c tele.Context) error {
 		)
 	}
 
-	if len(userClubs) == 1 {
-		menuMarkup.InlineKeyboard = append(menuMarkup.InlineKeyboard, []tele.InlineButton{*h.layout.Button(c, "clubOwner:myClubs:club", struct {
-			ID   string
-			Name string
-		}{
-			ID:   userClubs[0].ID,
-			Name: userClubs[0].Name,
-		}).Inline()})
-	}
-	if len(userClubs) > 1 {
+	//if len(userClubs) == 1 {
+	//	menuMarkup.InlineKeyboard = append(menuMarkup.InlineKeyboard, []tele.InlineButton{*h.layout.Button(c, "clubOwner:myClubs:club", struct {
+	//		ID   string
+	//		Name string
+	//	}{
+	//		ID:   userClubs[0].ID,
+	//		Name: userClubs[0].Name,
+	//	}).Inline()})
+	//}
+	//if len(userClubs) > 1 {
+	//	menuMarkup.InlineKeyboard = append(menuMarkup.InlineKeyboard, []tele.InlineButton{*h.layout.Button(c, "clubOwner:my_clubs").Inline()})
+	//}
+	if len(userClubs) > 0 {
 		menuMarkup.InlineKeyboard = append(menuMarkup.InlineKeyboard, []tele.InlineButton{*h.layout.Button(c, "clubOwner:my_clubs").Inline()})
+	}
+
+	if isAdmin {
+		menuMarkup.InlineKeyboard = append(menuMarkup.InlineKeyboard, []tele.InlineButton{*h.layout.Button(c, "mainMenu:admin_menu").Inline()})
 	}
 
 	h.logger.Infof("(user: %d) edit main menu (isAdmin=%t)", c.Sender().ID, isAdmin)
