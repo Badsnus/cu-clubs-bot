@@ -486,7 +486,7 @@ markups:
 #    - [ mainMenu:events, mainMenu:my_events ]
 #    - [ mainMenu:qr ]
   mainMenu:menu:
-    - [ mainMenu:cuClubs, mainMenu:events ]
+    - [ mainMenu:events ]
     - [ mainMenu:personalAccount ]
   mainMenu:back:
     - [ mainMenu:back ]
