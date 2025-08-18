@@ -40,14 +40,14 @@ func (h Handler) SendMenu(c tele.Context) error {
 
 	menuMarkup := h.layout.Markup(c, "mainMenu:menu")
 
-	//userClubs, err := h.clubService.GetByOwnerID(context.Background(), c.Sender().ID)
-	//if err != nil {
-	//	h.logger.Errorf("(user: %d) error while getting user's clubs from db: %v", c.Sender().ID, err)
-	//	return c.Send(
-	//		h.layout.Text(c, "technical_issues", err.Error()),
-	//		h.layout.Markup(c, "core:hide"),
-	//	)
-	//}
+	userClubs, err := h.clubService.GetByOwnerID(context.Background(), c.Sender().ID)
+	if err != nil {
+		h.logger.Errorf("(user: %d) error while getting user's clubs from db: %v", c.Sender().ID, err)
+		return c.Send(
+			h.layout.Text(c, "technical_issues", err.Error()),
+			h.layout.Markup(c, "core:hide"),
+		)
+	}
 
 	//if len(userClubs) == 1 {
 	//	menuMarkup.InlineKeyboard = append(menuMarkup.InlineKeyboard, []tele.InlineButton{*h.layout.Button(c, "clubOwner:myClubs:club", struct {
@@ -58,10 +58,9 @@ func (h Handler) SendMenu(c tele.Context) error {
 	//		Name: userClubs[0].Name,
 	//	}).Inline()})
 	//}
-	//if len(userClubs) > 1 {
-	//	menuMarkup.InlineKeyboard = append(menuMarkup.InlineKeyboard, []tele.InlineButton{*h.layout.Button(c, "clubOwner:my_clubs").Inline()})
-	//}
-	menuMarkup.InlineKeyboard = append(menuMarkup.InlineKeyboard, []tele.InlineButton{*h.layout.Button(c, "clubOwner:my_clubs").Inline()})
+	if len(userClubs) > 0 {
+		menuMarkup.InlineKeyboard = append(menuMarkup.InlineKeyboard, []tele.InlineButton{*h.layout.Button(c, "clubOwner:my_clubs").Inline()})
+	}
 
 	if isAdmin {
 		menuMarkup.InlineKeyboard = append(menuMarkup.InlineKeyboard, []tele.InlineButton{*h.layout.Button(c, "mainMenu:admin_menu").Inline()})
@@ -79,14 +78,14 @@ func (h Handler) EditMenu(c tele.Context) error {
 
 	menuMarkup := h.layout.Markup(c, "mainMenu:menu")
 
-	//userClubs, err := h.clubService.GetByOwnerID(context.Background(), c.Sender().ID)
-	//if err != nil {
-	//	h.logger.Errorf("(user: %d) error while getting user's clubs from db: %v", c.Sender().ID, err)
-	//	return c.Send(
-	//		h.layout.Text(c, "technical_issues", err.Error()),
-	//		h.layout.Markup(c, "core:hide"),
-	//	)
-	//}
+	userClubs, err := h.clubService.GetByOwnerID(context.Background(), c.Sender().ID)
+	if err != nil {
+		h.logger.Errorf("(user: %d) error while getting user's clubs from db: %v", c.Sender().ID, err)
+		return c.Send(
+			h.layout.Text(c, "technical_issues", err.Error()),
+			h.layout.Markup(c, "core:hide"),
+		)
+	}
 
 	//if len(userClubs) == 1 {
 	//	menuMarkup.InlineKeyboard = append(menuMarkup.InlineKeyboard, []tele.InlineButton{*h.layout.Button(c, "clubOwner:myClubs:club", struct {
@@ -100,7 +99,9 @@ func (h Handler) EditMenu(c tele.Context) error {
 	//if len(userClubs) > 1 {
 	//	menuMarkup.InlineKeyboard = append(menuMarkup.InlineKeyboard, []tele.InlineButton{*h.layout.Button(c, "clubOwner:my_clubs").Inline()})
 	//}
-	menuMarkup.InlineKeyboard = append(menuMarkup.InlineKeyboard, []tele.InlineButton{*h.layout.Button(c, "clubOwner:my_clubs").Inline()})
+	if len(userClubs) > 0 {
+		menuMarkup.InlineKeyboard = append(menuMarkup.InlineKeyboard, []tele.InlineButton{*h.layout.Button(c, "clubOwner:my_clubs").Inline()})
+	}
 
 	if isAdmin {
 		menuMarkup.InlineKeyboard = append(menuMarkup.InlineKeyboard, []tele.InlineButton{*h.layout.Button(c, "mainMenu:admin_menu").Inline()})
