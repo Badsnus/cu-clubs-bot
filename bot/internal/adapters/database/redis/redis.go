@@ -35,21 +35,21 @@ func New(opts Options) (*Client, error) {
 		return nil, fmt.Errorf("failed to ping state storage: %w", err)
 	}
 
-	codeRedis := redis.NewClient(&redis.Options{
+	codesRedis := redis.NewClient(&redis.Options{
 		Addr:     fmt.Sprintf("%s:%s", opts.Host, opts.Port),
 		Password: opts.Password,
 		DB:       1,
 	})
-	if err := codeRedis.Ping(context.Background()).Err(); err != nil {
+	if err := codesRedis.Ping(context.Background()).Err(); err != nil {
 		return nil, fmt.Errorf("failed to ping codes storage: %w", err)
 	}
 
-	emailRedis := redis.NewClient(&redis.Options{
+	emailsRedis := redis.NewClient(&redis.Options{
 		Addr:     fmt.Sprintf("%s:%s", opts.Host, opts.Port),
 		Password: opts.Password,
 		DB:       2,
 	})
-	if err := emailRedis.Ping(context.Background()).Err(); err != nil {
+	if err := emailsRedis.Ping(context.Background()).Err(); err != nil {
 		return nil, fmt.Errorf("failed to ping email storage: %w", err)
 	}
 	eventsRedis := redis.NewClient(&redis.Options{
@@ -71,8 +71,8 @@ func New(opts Options) (*Client, error) {
 
 	return &Client{
 		States:    states.NewStorage(stateRedis),
-		Codes:     codes.NewStorage(codeRedis),
-		Emails:    emails.NewStorage(emailRedis),
+		Codes:     codes.NewStorage(codesRedis),
+		Emails:    emails.NewStorage(emailsRedis),
 		Events:    events.NewStorage(eventsRedis),
 		Callbacks: callbacks.NewStorage(callbacksRedis),
 	}, nil

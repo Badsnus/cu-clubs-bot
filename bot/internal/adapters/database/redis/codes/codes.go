@@ -2,12 +2,12 @@ package codes
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
-	"strings"
+	"log"
 	"time"
 
-	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/common/errorz"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -22,8 +22,14 @@ func NewStorage(client *redis.Client) *Storage {
 }
 
 type Code struct {
-	Code        string
-	CodeContext string
+	Code        string      `json:"code"`
+	CodeContext CodeContext `json:"code_context"`
+	NextResend  time.Time   `json:"next_resend"`
+}
+
+type CodeContext struct {
+	Email string `json:"email"`
+	FIO   string `json:"fio"`
 }
 
 func (s *Storage) Get(userID int64) (Code, error) {
@@ -31,40 +37,57 @@ func (s *Storage) Get(userID int64) (Code, error) {
 	if err != nil {
 		return Code{}, err
 	}
-	codeSlice := strings.Split(codeData, ":")
-	if len(codeSlice) == 1 {
-		return Code{
-			Code:        codeSlice[0],
-			CodeContext: "",
-		}, nil
+
+	var code Code
+	if err := json.Unmarshal([]byte(codeData), &code); err != nil {
+		return Code{}, fmt.Errorf("failed to unmarshal code data: %w", err)
 	}
 
-	if len(codeSlice) == 2 {
-		return Code{
-			Code:        codeSlice[0],
-			CodeContext: codeSlice[1],
-		}, nil
-	}
-
-	return Code{}, errorz.ErrInvalidCode
+	return code, nil
 }
 
-func (s *Storage) GetCanResend(userID int64) (bool, error) {
-	_, err := s.redis.Get(context.Background(), fmt.Sprintf("can_resend:%d", userID)).Result()
+func (s *Storage) GetCanResend(userID int64) (bool, time.Duration, error) {
+	code, err := s.Get(userID)
 	if errors.Is(err, redis.Nil) {
-		return true, nil
+		return true, 0, nil
 	}
-	return false, err
+	if err != nil {
+		return false, 0, err
+	}
+
+	now := time.Now()
+	log.Println(now.UTC(), code.NextResend.UTC())
+	canResend := now.UTC().After(code.NextResend.UTC())
+
+	if canResend {
+		return true, 0, nil
+	}
+
+	timeLeft := code.NextResend.UTC().Sub(now.UTC())
+	return false, timeLeft, nil
 }
 
-func (s *Storage) Set(userID int64, code string, codeContext string, expiration time.Duration) {
-	s.redis.Set(context.Background(), fmt.Sprintf("%d", userID), fmt.Sprintf("%s:%s", code, codeContext), expiration)
+func (s *Storage) Set(
+	userID int64,
+	code string,
+	codeContext CodeContext,
+	expiration time.Duration,
+	resendCooldown time.Duration,
+) error {
+	codeData := Code{
+		Code:        code,
+		CodeContext: codeContext,
+		NextResend:  time.Now().UTC().Add(resendCooldown),
+	}
+
+	jsonData, err := json.Marshal(codeData)
+	if err != nil {
+		return fmt.Errorf("failed to marshal code data: %w", err)
+	}
+
+	return s.redis.Set(context.Background(), fmt.Sprintf("%d", userID), jsonData, expiration).Err()
 }
 
-func (s *Storage) SetCanResend(userID int64, canResend bool, expiration time.Duration) {
-	s.redis.Set(context.Background(), fmt.Sprintf("can_resend:%d", userID), canResend, expiration)
-}
-
-func (s *Storage) Clear(userID int64) {
-	s.redis.Del(context.Background(), fmt.Sprintf("%d", userID))
+func (s *Storage) Clear(userID int64) error {
+	return s.redis.Del(context.Background(), fmt.Sprintf("%d", userID)).Err()
 }

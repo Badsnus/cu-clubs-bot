@@ -43,6 +43,12 @@ func (s *UserStorage) GetMany(ctx context.Context, ids []int64) ([]entity.User, 
 	return users, err
 }
 
+func (s *UserStorage) GetByEmail(ctx context.Context, email string) (*entity.User, error) {
+	var user entity.User
+	err := s.db.WithContext(ctx).Where("email = ?", email).First(&user).Error
+	return &user, err
+}
+
 // GetAll is a function that gets all users from the database.
 func (s *UserStorage) GetAll(ctx context.Context) ([]entity.User, error) {
 	var users []entity.User
