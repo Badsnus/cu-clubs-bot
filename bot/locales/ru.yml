@@ -95,6 +95,9 @@ email_auth_link_resent: |-
 main_menu_text: |-
   <b>Главное меню:</b>
 events: Мероприятия
+cu_clubs: Клубы ЦУ
+personal_account: Личный кабинет
+personal_account_text: Добро пожаловать в личный кабинет
 my_events: Мои мероприятия
 my_clubs: Мои клубы
 admin_menu: Админ-меню
