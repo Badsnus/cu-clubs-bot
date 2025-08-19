@@ -187,19 +187,45 @@ club_settings_text: |-
   {{if .Owners}}{{range .Owners}}- <b>{{html .FIO}}</b> (id: <code>{{.UserID}}</code>){{"\n"}}{{end}}{{else}}<i>- Отсутствуют</i>{{"\n"}}{{end}}
   <b>Описание:</b>
   <blockquote>{{if .Club.Description}}{{html .Club.Description}}{{else}}<i>Не указано</i>{{end}}</blockquote>
-edit_name: Изменить название
-name_changed: <b>Название клуба успешно изменено ✅</b>
-edit_description: Изменить описание
-input_club_description: |-
-  <b>Введите описание клуба</b>
-invalid_club_description: |-
-  <b>Название клуба должно быть не более 400 символов</b>
 
   <i>Попробуйте ещё раз</i>
-description_changed: <b>Описание клуба успешно изменено ✅</b>
+
 warnings: Уведомления
 warnings_text: |-
   <b>Настройка уведомлений клуба</b>
+
+profile: Профиль
+profile_text: |-
+  <b>Настройка профиля клуба</b>
+
+set_club_name: Установить название
+club_name_set: <b>Название клуба успешно установлено ✅</b>
+set_club_description: Установить описание
+input_club_description: |-
+  <b>Введите описание клуба</b>
+invalid_club_description: |-
+  <b>Описание клуба должно быть не более 400 символов</b>
+club_description_set: <b>Описание клуба успешно установлено ✅</b>
+set_club_link: Установить ссылку на канал/чат клуба
+input_club_link: |-
+  <b>Укажите ссылку на канал/чат клуба</b>
+invalid_club_link: |-
+  <b>Ссылка должна быть корректной</b>
+club_link_set: <b>Ссылка на канал/чат клуба успешно установлено ✅</b>
+set_club_avatar: Установить аватар
+input_club_avatar: |-
+  <b>Отправьте аватар клуба</b>
+invalid_club_avatar: |-
+  <b>Некорректный аватар, аватар должен быть фотографией, а не файлом</b>
+club_avatar_set: |-
+  <b>Аватар клуба успешно установлен ✅</b>
+set_club_intro: Установить интро
+input_club_intro: |-
+  <b>Отправьте интро-кружок клуба</b>
+invalid_club_intro: |-
+  <b>Некорректное интро, интро должно быть кружком</b>
+club_intro_set: |-
+  <b>Интро клуба успешно установлено</b>
 
 create_event: Создать мероприятие
 club_events: Мероприятия

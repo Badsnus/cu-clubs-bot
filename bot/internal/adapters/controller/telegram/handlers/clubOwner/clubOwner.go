@@ -837,6 +837,22 @@ func (h Handler) addOwner(c tele.Context) error {
 	)
 }
 
+func (h Handler) profile(c tele.Context) error {
+	if c.Callback().Data == "" {
+		return errorz.ErrInvalidCallbackData
+	}
+	clubID := c.Callback().Data
+
+	return c.Edit(
+		banner.ClubOwner.Caption(h.layout.Text(c, "profile_text")),
+		h.layout.Markup(c, "clubOwner:club:settings:profile", struct {
+			ID string
+		}{
+			ID: clubID,
+		}),
+	)
+}
+
 func (h Handler) warnings(c tele.Context) error {
 	var (
 		clubID string
@@ -3322,10 +3338,11 @@ func (h Handler) ClubOwnerSetup(group *tele.Group, middle *middlewares.Handler) 
 
 	group.Handle(h.layout.Callback("clubOwner:club:settings"), h.clubSettings)
 	group.Handle(h.layout.Callback("clubOwner:club:settings:back"), h.clubSettings)
-	group.Handle(h.layout.Callback("clubOwner:club:settings:edit_name"), h.editName)
-	group.Handle(h.layout.Callback("clubOwner:club:settings:edit_description"), h.editDescription)
+	//group.Handle(h.layout.Callback("clubOwner:club:settings:edit_name"), h.editName)
+	//group.Handle(h.layout.Callback("clubOwner:club:settings:edit_description"), h.editDescription)
 	group.Handle(h.layout.Callback("clubOwner:club:settings:add_owner"), h.addOwner)
 	group.Handle(h.layout.Callback("clubOwner:club:settings:warnings"), h.warnings)
+	group.Handle(h.layout.Callback("clubOwner:club:settings:profile"), h.profile)
 	group.Handle(h.layout.Callback("clubOwner:club:settings:warnings:user"), h.warnings)
 }
 

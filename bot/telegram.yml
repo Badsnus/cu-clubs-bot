@@ -190,20 +190,40 @@ buttons:
     callback_data: '{{.ID}}'
     text: '{{ text `back` }}'
 
-  clubOwner:club:settings:edit_name:
-    unique: clubOwner_club_editName
-    callback_data: '{{.ID}}'
-    text: '{{ text `edit_name` }}'
-
-  clubOwner:club:settings:edit_description:
-    unique: clubOwner_club_editDesc
-    callback_data: '{{.ID}}'
-    text: '{{ text `edit_description` }}'
-
   clubOwner:club:settings:add_owner:
     unique: clubOwner_club_addOwner
     callback_data: '{{.ID}}'
     text: '{{ text `add_club_owner` }}'
+
+  clubOwner:club:settings:profile:
+    unique: clubOwner_club
+    callback_data: '{{.ID}}'
+    text: '{{ text `profile` }}'
+
+  clubOwner:club:settings:profile:set_name:
+    unique: clubOwner_club_setName
+    callback_data: '{{.ID}}'
+    text: '{{ text `set_club_name` }}'
+
+  clubOwner:club:settings:profile:set_description:
+    unique: clubOwner_club_setDesc
+    callback_data: '{{.ID}}'
+    text: '{{ text `set_club_description` }}'
+
+  clubOwner:club:settings:profile:set_link:
+    unique: clubOwner_club_setLink
+    callback_data: '{{.ID}}'
+    text: '{{ text `set_club_link` }}'
+
+  clubOwner:club:settings:profile:set_avatar:
+    unique: clubOwner_club_setAvatar
+    callback_data: '{{.ID}}'
+    text: '{{ text `set_club_avatar` }}'
+
+  clubOwner:club:settings:profile:set_intro:
+    unique: clubOwner_club_setIntro
+    callback_data: '{{.ID}}'
+    text: '{{ text `set_club_intro` }}'
 
   clubOwner:club:settings:warnings:
     unique: clubOwner_club_warnings
@@ -486,7 +506,7 @@ markups:
 #    - [ mainMenu:events, mainMenu:my_events ]
 #    - [ mainMenu:qr ]
   mainMenu:menu:
-    - [ mainMenu:events ]
+    - [ mainMenu:cuClubs, mainMenu:events ]
     - [ mainMenu:personalAccount ]
   mainMenu:back:
     - [ mainMenu:back ]
@@ -522,14 +542,22 @@ markups:
     - [ clubOwner:club:mailing ]
     - [ clubOwner:club:settings ]
   clubOwner:club:settings:
-    - [ clubOwner:club:settings:edit_name ]
-    - [ clubOwner:club:settings:edit_description ]
+#    - [ clubOwner:club:settings:edit_name ]
+#    - [ clubOwner:club:settings:edit_description ]
     - [ clubOwner:club:settings:add_owner ]
     - [ clubOwner:club:settings:warnings ]
+    - [ clubOwner:club:settings:profile ]
     - [ clubOwner:club:back ]
   clubOwner:club:settings:back:
     - [ clubOwner:club:settings:back ]
   clubOwner:club:settings:warnings:
+    - [ clubOwner:club:settings:back ]
+  clubOwner:club:settings:profile:
+    - [ clubOwner:club:settings:profile:set_name ]
+    - [ clubOwner:club:settings:profile:set_description ]
+    - [ clubOwner:club:settings:profile:set_link ]
+    - [ clubOwner:club:settings:profile:set_avatar ]
+    - [ clubOwner:club:settings:profile:set_intro ]
     - [ clubOwner:club:settings:back ]
   clubOwner:club:back:
     - [ clubOwner:club:back ]
