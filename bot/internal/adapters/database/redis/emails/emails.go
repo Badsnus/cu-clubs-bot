@@ -2,11 +2,10 @@ package emails
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
-	"strings"
 	"time"
 
-	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/common/errorz"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -21,8 +20,12 @@ func NewStorage(client *redis.Client) *Storage {
 }
 
 type Email struct {
-	Email        string
-	EmailContext string
+	Email        string       `json:"email"`
+	EmailContext EmailContext `json:"email_context"`
+}
+
+type EmailContext struct {
+	FIO string `json:"fio"`
 }
 
 func (s *Storage) Get(userID int64) (Email, error) {
@@ -30,28 +33,29 @@ func (s *Storage) Get(userID int64) (Email, error) {
 	if err != nil {
 		return Email{}, err
 	}
-	emailSlice := strings.Split(emailData, ":")
-	if len(emailSlice) == 1 {
-		return Email{
-			Email:        emailSlice[0],
-			EmailContext: "",
-		}, nil
+
+	var email Email
+	if err := json.Unmarshal([]byte(emailData), &email); err != nil {
+		return Email{}, fmt.Errorf("failed to unmarshal email data: %w", err)
 	}
 
-	if len(emailSlice) == 2 {
-		return Email{
-			Email:        emailSlice[0],
-			EmailContext: emailSlice[1],
-		}, nil
+	return email, nil
+}
+
+func (s *Storage) Set(userID int64, email string, emailContext EmailContext, expiration time.Duration) error {
+	emailData := Email{
+		Email:        email,
+		EmailContext: emailContext,
 	}
 
-	return Email{}, errorz.ErrInvalidCode
+	jsonData, err := json.Marshal(emailData)
+	if err != nil {
+		return fmt.Errorf("failed to marshal email data: %w", err)
+	}
+
+	return s.redis.Set(context.Background(), fmt.Sprintf("%d", userID), jsonData, expiration).Err()
 }
 
-func (s *Storage) Set(userID int64, code string, codeContext string, expiration time.Duration) {
-	s.redis.Set(context.Background(), fmt.Sprintf("%d", userID), fmt.Sprintf("%s:%s", code, codeContext), expiration)
-}
-
-func (s *Storage) Clear(userID int64) {
-	s.redis.Del(context.Background(), fmt.Sprintf("%d", userID))
+func (s *Storage) Clear(userID int64) error {
+	return s.redis.Del(context.Background(), fmt.Sprintf("%d", userID)).Err()
 }

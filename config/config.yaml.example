@@ -27,6 +27,7 @@ bot:
   session:
     ttl: 45m
     auth-ttl: 10m
+    resend-ttl: 10m
     email-ttl: 120m
   banner:
     auth: "AgACAgIAAxkDAAMjZ54WGso7E9FRgvmxvzD9dAuLF98AAvDlMRvelPFIqs-v4Q8TUswBAAMCAAN3AAM2BA"

@@ -8,6 +8,7 @@ import (
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/utils/banner"
 	qr "github.com/Badsnus/cu-clubs-bot/bot/pkg/qrcode"
 	"github.com/spf13/viper"
+	"log"
 	"strings"
 	"time"
 
@@ -85,14 +86,13 @@ type Handler struct {
 
 func New(b *bot.Bot) *Handler {
 	userStorage := postgres.NewUserStorage(b.DB)
-	studentDataStorage := postgres.NewStudentDataStorage(b.DB)
 	eventStorage := postgres.NewEventStorage(b.DB)
 	clubStorage := postgres.NewClubStorage(b.DB)
 	eventParticipantStorage := postgres.NewEventParticipantStorage(b.DB)
 	clubOwnerStorage := postgres.NewClubOwnerStorage(b.DB)
 	notificationStorage := postgres.NewNotificationStorage(b.DB)
 
-	userSrvc := service.NewUserService(userStorage, studentDataStorage, nil, nil, "")
+	userSrvc := service.NewUserService(userStorage, nil, nil, "")
 	eventSrvc := service.NewEventService(eventStorage)
 	clubOwnerSrvc := service.NewClubOwnerService(clubOwnerStorage, userStorage)
 
@@ -160,6 +160,7 @@ func (h Handler) Start(c tele.Context) error {
 	if len(payload) == 2 {
 		payloadType, data = payload[0], payload[1]
 	}
+	log.Println(payloadType, data)
 
 	switch payloadType {
 	case "auth":

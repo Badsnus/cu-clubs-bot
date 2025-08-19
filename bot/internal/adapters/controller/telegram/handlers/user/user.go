@@ -37,8 +37,9 @@ import (
 type userService interface {
 	Create(ctx context.Context, user entity.User) (*entity.User, error)
 	Get(ctx context.Context, userID int64) (*entity.User, error)
+	GetByEmail(ctx context.Context, email string) (*entity.User, error)
 	GetByQRCodeID(ctx context.Context, qrCodeID string) (*entity.User, error)
-	SendAuthCode(ctx context.Context, email string) (string, string, error)
+	SendAuthCode(ctx context.Context, email string, botUserName string) (string, error)
 	Update(ctx context.Context, user *entity.User) (*entity.User, error)
 	GetUserEvents(ctx context.Context, userID int64, limit, offset int) ([]dto.UserEvent, error)
 	CountUserEvents(ctx context.Context, userID int64) (int64, error)
@@ -90,7 +91,6 @@ type Handler struct {
 
 func New(b *bot.Bot) *Handler {
 	userStorage := postgres.NewUserStorage(b.DB)
-	studentDataStorage := postgres.NewStudentDataStorage(b.DB)
 	eventStorage := postgres.NewEventStorage(b.DB)
 	eventParticipantStorage := postgres.NewEventParticipantStorage(b.DB)
 	clubOwnerStorage := postgres.NewClubOwnerStorage(b.DB)
@@ -104,7 +104,7 @@ func New(b *bot.Bot) *Handler {
 	wd, _ := os.Getwd()
 	emailHTMLFilePath := filepath.Join(wd, viper.GetString("settings.html.email-confirmation"))
 
-	userSrvc := service.NewUserService(userStorage, studentDataStorage, eventPartService, smtpClient, emailHTMLFilePath)
+	userSrvc := service.NewUserService(userStorage, eventPartService, smtpClient, emailHTMLFilePath)
 
 	qrSrvc, err := service.NewQrService(
 		b.Bot,

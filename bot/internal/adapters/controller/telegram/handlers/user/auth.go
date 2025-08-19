@@ -3,6 +3,7 @@ package user
 import (
 	"context"
 	"errors"
+	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/database/redis/codes"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/database/redis/emails"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/entity"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/utils"
@@ -14,6 +15,7 @@ import (
 	"github.com/spf13/viper"
 	tele "gopkg.in/telebot.v3"
 	"gorm.io/gorm"
+	"math"
 	"time"
 )
 
@@ -405,8 +407,8 @@ func (h Handler) studentAuth(c tele.Context) error {
 	inputCollector.Collect(c.Message())
 
 	var (
-		email string
-		done  bool
+		email     string
+		doneEmail bool
 	)
 	for {
 		response, errGet := h.input.Get(context.Background(), c.Sender().ID, 0)
@@ -436,23 +438,82 @@ func (h Handler) studentAuth(c tele.Context) error {
 			)
 		case validator.Email(response.Message.Text, nil):
 			email = response.Message.Text
-			done = true
+			_, err := h.userService.GetByEmail(context.Background(), email)
+			if err == nil {
+				_ = inputCollector.Send(c,
+					banner.Auth.Caption(h.layout.Text(c, "user_with_this_email_already_exists")),
+					h.layout.Markup(c, "auth:backToMenu"),
+				)
+				continue
+			}
+			doneEmail = true
 		}
-		if done {
+		if doneEmail {
 			break
 		}
 	}
+	_ = inputCollector.Clear(c, collector.ClearOptions{IgnoreErrors: true})
 
-	canResend, err := h.codesStorage.GetCanResend(c.Sender().ID)
+	inputCollector = collector.New()
+	_ = inputCollector.Send(c,
+		banner.Auth.Caption(h.layout.Text(c, "fio_request")),
+		h.layout.Markup(c, "auth:backToMenu"),
+	)
+
+	var (
+		fio     string
+		doneFIO bool
+	)
+	for {
+		response, errGet := h.input.Get(context.Background(), c.Sender().ID, 0)
+		if response.Message != nil {
+			inputCollector.Collect(response.Message)
+		}
+		switch {
+		case response.Canceled:
+			_ = inputCollector.Clear(c, collector.ClearOptions{IgnoreErrors: true, ExcludeLast: true})
+			return nil
+		case errGet != nil:
+			h.logger.Errorf("(user: %d) error while input fio %v", c.Sender().ID, errGet)
+			_ = inputCollector.Send(c,
+				banner.Auth.Caption(h.layout.Text(c, "input_error", h.layout.Text(c, "fio_request"))),
+				h.layout.Markup(c, "auth:backToMenu"),
+			)
+		case response.Message == nil:
+			h.logger.Errorf("(user: %d) error while input fio: %v", c.Sender().ID, errGet)
+			_ = inputCollector.Send(c,
+				banner.Auth.Caption(h.layout.Text(c, "input_error", h.layout.Text(c, "fio_request"))),
+				h.layout.Markup(c, "auth:backToMenu"),
+			)
+		case !validator.Fio(response.Message.Text, nil):
+			_ = inputCollector.Send(c,
+				banner.Auth.Caption(h.layout.Text(c, "invalid_user_fio")),
+				h.layout.Markup(c, "auth:backToMenu"),
+			)
+		case validator.Fio(response.Message.Text, nil):
+			fio = response.Message.Text
+			doneFIO = true
+		}
+		if doneFIO {
+			break
+		}
+	}
+	_ = inputCollector.Clear(c, collector.ClearOptions{IgnoreErrors: true})
+
+	canResend, _, err := h.codesStorage.GetCanResend(c.Sender().ID)
 	if err != nil {
 		h.logger.Errorf("(user: %d) error while getting auth code from redis: %v", c.Sender().ID, err)
 		return c.Send(
 			banner.Auth.Caption(h.layout.Text(c, "technical_issues", err.Error())),
 		)
 	}
-	var data, code string
+	var code string
 	if canResend {
-		data, code, err = h.userService.SendAuthCode(context.Background(), email)
+		code, err = h.userService.SendAuthCode(
+			context.Background(),
+			email,
+			c.Bot().Me.Username,
+		)
 		if err != nil {
 			h.logger.Errorf("(user: %d) error while sending auth code: %v", c.Sender().ID, err)
 			return c.Send(
@@ -461,9 +522,39 @@ func (h Handler) studentAuth(c tele.Context) error {
 			)
 		}
 
-		h.emailsStorage.Set(c.Sender().ID, email, "", viper.GetDuration("bot.session.email-ttl"))
-		h.codesStorage.Set(c.Sender().ID, code, data, viper.GetDuration("bot.session.auth-ttl"))
-		h.codesStorage.SetCanResend(c.Sender().ID, true, viper.GetDuration("bot.session.resend-ttl"))
+		err = h.emailsStorage.Set(
+			c.Sender().ID,
+			email,
+			emails.EmailContext{
+				FIO: fio,
+			},
+			viper.GetDuration("bot.session.email-ttl"),
+		)
+		if err != nil {
+			h.logger.Errorf("(user: %d) error while saving email to redis: %v", c.Sender().ID, err)
+			return c.Send(
+				banner.Auth.Caption(h.layout.Text(c, "technical_issues", err.Error())),
+				h.layout.Markup(c, "auth:backToMenu"),
+			)
+		}
+
+		err = h.codesStorage.Set(
+			c.Sender().ID,
+			code,
+			codes.CodeContext{
+				Email: email,
+				FIO:   fio,
+			},
+			viper.GetDuration("bot.session.auth-ttl"),
+			viper.GetDuration("bot.session.resend-ttl"),
+		)
+		if err != nil {
+			h.logger.Errorf("(user: %d) error while saving auth code to redis: %v", c.Sender().ID, err)
+			return c.Send(
+				banner.Auth.Caption(h.layout.Text(c, "technical_issues", err.Error())),
+				h.layout.Markup(c, "auth:backToMenu"),
+			)
+		}
 
 		h.logger.Infof("(user: %d) auth code sent on %s", c.Sender().ID, email)
 
@@ -474,7 +565,10 @@ func (h Handler) studentAuth(c tele.Context) error {
 	}
 
 	return c.Send(
-		banner.Auth.Caption(h.layout.Text(c, "resend_timeout")),
+		banner.Auth.Caption(h.layout.Text(c,
+			"resend_timeout",
+			viper.GetDuration("bot.session.resend-ttl").Minutes()),
+		),
 		h.layout.Markup(c, "auth:resendMenu"),
 	)
 }
@@ -489,7 +583,7 @@ func (h Handler) backToAuthMenu(c tele.Context) error {
 func (h Handler) resendEmailConfirmationCode(c tele.Context) error {
 	h.logger.Infof("(user: %d) resend auth code", c.Sender().ID)
 
-	canResend, err := h.codesStorage.GetCanResend(c.Sender().ID)
+	canResend, timeBeforeResend, err := h.codesStorage.GetCanResend(c.Sender().ID)
 	if err != nil {
 		h.logger.Errorf("(user: %d) error while getting auth code from redis: %v", c.Sender().ID, err)
 		return c.Send(
@@ -497,7 +591,7 @@ func (h Handler) resendEmailConfirmationCode(c tele.Context) error {
 		)
 	}
 
-	var data, code string
+	var code string
 	var email emails.Email
 	if canResend {
 		email, err = h.emailsStorage.Get(c.Sender().ID)
@@ -514,7 +608,11 @@ func (h Handler) resendEmailConfirmationCode(c tele.Context) error {
 			)
 		}
 
-		data, code, err = h.userService.SendAuthCode(context.Background(), email.Email)
+		code, err = h.userService.SendAuthCode(
+			context.Background(),
+			email.Email,
+			c.Bot().Me.Username,
+		)
 		if err != nil {
 			h.logger.Errorf("(user: %d) error while sending auth code: %v", c.Sender().ID, err)
 			return c.Send(
@@ -522,9 +620,34 @@ func (h Handler) resendEmailConfirmationCode(c tele.Context) error {
 			)
 		}
 
-		h.emailsStorage.Set(c.Sender().ID, email.Email, "", viper.GetDuration("bot.session.email-ttl"))
-		h.codesStorage.Set(c.Sender().ID, code, data, viper.GetDuration("bot.session.auth-ttl"))
-		h.codesStorage.SetCanResend(c.Sender().ID, true, viper.GetDuration("bot.session.resend-ttl"))
+		err = h.emailsStorage.Set(
+			c.Sender().ID,
+			email.Email,
+			email.EmailContext,
+			viper.GetDuration("bot.session.email-ttl"),
+		)
+		if err != nil {
+			h.logger.Errorf("(user: %d) error while saving user email to redis: %v", c.Sender().ID, err)
+			return c.Send(
+				banner.Auth.Caption(h.layout.Text(c, "technical_issues", err.Error())),
+			)
+		}
+		err = h.codesStorage.Set(
+			c.Sender().ID,
+			code,
+			codes.CodeContext{
+				Email: email.Email,
+				FIO:   email.EmailContext.FIO,
+			},
+			viper.GetDuration("bot.session.auth-ttl"),
+			viper.GetDuration("bot.session.resend-ttl"),
+		)
+		if err != nil {
+			h.logger.Errorf("(user: %d) error while saving auth code to redis: %v", c.Sender().ID, err)
+			return c.Send(
+				banner.Auth.Caption(h.layout.Text(c, "technical_issues", err.Error())),
+			)
+		}
 
 		h.logger.Infof("(user: %d) auth code sent on %s", c.Sender().ID, email.Email)
 
@@ -534,10 +657,13 @@ func (h Handler) resendEmailConfirmationCode(c tele.Context) error {
 		)
 	}
 
-	return c.Edit(
-		banner.Auth.Caption(h.layout.Text(c, "resend_timeout")),
-		h.layout.Markup(c, "auth:resendMenu"),
-	)
+	return c.Respond(&tele.CallbackResponse{
+		Text: h.layout.Text(c,
+			"resend_timeout_with_time_before_resend",
+			math.Round(timeBeforeResend.Minutes()),
+		),
+		ShowAlert: true,
+	})
 }
 
 func (h Handler) AuthSetup(group *tele.Group) {
