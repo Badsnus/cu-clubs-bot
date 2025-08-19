@@ -9,6 +9,13 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
+type EmailType string
+
+const (
+	EmailTypeChangingRole EmailType = "changing_role"
+	EmailTypeAuth         EmailType = "auth"
+)
+
 type Storage struct {
 	redis *redis.Client
 }
@@ -22,6 +29,7 @@ func NewStorage(client *redis.Client) *Storage {
 type Email struct {
 	Email        string       `json:"email"`
 	EmailContext EmailContext `json:"email_context"`
+	Type         EmailType    `json:"type"`
 }
 
 type EmailContext struct {
@@ -42,10 +50,11 @@ func (s *Storage) Get(userID int64) (Email, error) {
 	return email, nil
 }
 
-func (s *Storage) Set(userID int64, email string, emailContext EmailContext, expiration time.Duration) error {
+func (s *Storage) Set(userID int64, email string, emailType EmailType, emailContext EmailContext, expiration time.Duration) error {
 	emailData := Email{
 		Email:        email,
 		EmailContext: emailContext,
+		Type:         emailType,
 	}
 
 	jsonData, err := json.Marshal(emailData)

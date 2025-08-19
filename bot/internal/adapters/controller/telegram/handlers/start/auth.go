@@ -32,7 +32,7 @@ func (h Handler) auth(c tele.Context, authCode string) error {
 
 	if authCode != code.Code {
 		return c.Send(
-			h.layout.Text(c, "something_went_wrong"),
+			h.layout.Text(c, "wrong_code"),
 			h.layout.Markup(c, "core:hide"),
 		)
 	}

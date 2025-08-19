@@ -7,8 +7,8 @@ import (
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/database/redis/events"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/utils/banner"
 	qr "github.com/Badsnus/cu-clubs-bot/bot/pkg/qrcode"
+	"github.com/redis/go-redis/v9"
 	"github.com/spf13/viper"
-	"log"
 	"strings"
 	"time"
 
@@ -30,6 +30,12 @@ type userService interface {
 	Get(ctx context.Context, userID int64) (*entity.User, error)
 	GetByQRCodeID(ctx context.Context, qrCodeID string) (*entity.User, error)
 	Update(ctx context.Context, user *entity.User) (*entity.User, error)
+	ChangeRole(
+		ctx context.Context,
+		userID int64,
+		role entity.Role,
+		email string,
+	) error
 }
 
 type clubService interface {
@@ -160,17 +166,39 @@ func (h Handler) Start(c tele.Context) error {
 	if len(payload) == 2 {
 		payloadType, data = payload[0], payload[1]
 	}
-	log.Println(payloadType, data)
 
 	switch payloadType {
-	case "auth":
-		return h.auth(c, data)
+	case "emailCode":
+		email, err := h.emailsStorage.Get(c.Sender().ID)
+		if err != nil && !errors.Is(err, redis.Nil) {
+			h.logger.Errorf("(user: %d) error while getting user email from redis: %v", c.Sender().ID, err)
+			return c.Send(
+				h.layout.Text(c, "something_went_wrong"),
+				h.layout.Markup(c, "core:hide"),
+			)
+		}
+		switch email.Type {
+		case emails.EmailTypeAuth:
+			return h.auth(c, data)
+		case emails.EmailTypeChangingRole:
+			return h.changeRole(c, data)
+		default:
+			h.logger.Errorf("(user: %d) invalid email type: %v", c.Sender().ID, err)
+			return c.Send(
+				h.layout.Text(c, "something_went_wrong"),
+				h.layout.Markup(c, "core:hide"),
+			)
+		}
+
 	case "userQR":
 		return h.userQR(c, data)
+
 	case "eventQR":
 		return h.eventQR(c, data)
+
 	case "event":
 		return h.eventMenu(c, data)
+
 	default:
 		return c.Send(
 			h.layout.Text(c, "something_went_wrong"),

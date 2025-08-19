@@ -19,14 +19,18 @@ import (
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/utils/banner"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/utils/calendar"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/utils/location"
+	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/utils/validator"
 	"github.com/Badsnus/cu-clubs-bot/bot/pkg/logger/types"
 	qr "github.com/Badsnus/cu-clubs-bot/bot/pkg/qrcode"
 	"github.com/Badsnus/cu-clubs-bot/bot/pkg/smtp"
 	"github.com/nlypage/intele"
+	"github.com/nlypage/intele/collector"
+	"github.com/redis/go-redis/v9"
 	"github.com/spf13/viper"
 	tele "gopkg.in/telebot.v3"
 	"gopkg.in/telebot.v3/layout"
 	"gorm.io/gorm"
+	"math"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -39,11 +43,17 @@ type userService interface {
 	Get(ctx context.Context, userID int64) (*entity.User, error)
 	GetByEmail(ctx context.Context, email string) (*entity.User, error)
 	GetByQRCodeID(ctx context.Context, qrCodeID string) (*entity.User, error)
-	SendAuthCode(ctx context.Context, email string, botUserName string) (string, error)
+	SendAuthCode(ctx context.Context, email string, url string) (string, error)
 	Update(ctx context.Context, user *entity.User) (*entity.User, error)
 	GetUserEvents(ctx context.Context, userID int64, limit, offset int) ([]dto.UserEvent, error)
 	CountUserEvents(ctx context.Context, userID int64) (int64, error)
 	IgnoreMailing(ctx context.Context, userID int64, clubID string) (bool, error)
+	ChangeRole(
+		ctx context.Context,
+		userID int64,
+		role entity.Role,
+		email string,
+	) error
 }
 
 type eventService interface {
@@ -151,8 +161,32 @@ func (h Handler) Hide(c tele.Context) error {
 func (h Handler) personalAccount(c tele.Context) error {
 	h.logger.Infof("(user: %d getting personal account", c.Sender().ID)
 
+	user, err := h.userService.Get(context.Background(), c.Sender().ID)
+	if err != nil {
+		h.logger.Errorf("(user: %d) error while getting user from db: %v", c.Sender().ID, err)
+		return c.Edit(
+			banner.Events.Caption(h.layout.Text(c, "technical_issues", err.Error())),
+			h.layout.Markup(c, "mainMenu:back"),
+		)
+	}
+
+	fio, err := user.ParseFIO()
+	if err != nil {
+		h.logger.Errorf("(user: %d) error parsing user fio: %v", c.Sender().ID, err)
+		return c.Edit(
+			banner.Events.Caption(h.layout.Text(c, "technical_issues", err.Error())),
+			h.layout.Markup(c, "mainMenu:back"),
+		)
+	}
+
 	return c.Edit(
-		banner.PersonalAccount.Caption(h.layout.Text(c, "personal_account_text")),
+		banner.PersonalAccount.Caption(h.layout.Text(c, "personal_account_text", struct {
+			Name string
+			Role string
+		}{
+			Name: fio.Name,
+			Role: user.Role.String(),
+		})),
 		h.layout.Markup(c, "personalAccount:menu"),
 	)
 }
@@ -178,7 +212,7 @@ func (h Handler) qrCode(c tele.Context) error {
 			File:    file,
 			Caption: h.layout.Text(c, "qr_text"),
 		},
-		h.layout.Markup(c, "personalAccount:back"),
+		h.layout.Markup(c, "mainMenu:back"),
 	)
 }
 
@@ -1157,6 +1191,384 @@ func (h Handler) mailingSwitch(c tele.Context) error {
 	)
 }
 
+func (h Handler) changeRole(c tele.Context) error {
+	_ = c.Respond()
+
+	confirmationMessage, err := c.Bot().Send(
+		c.Chat(),
+		h.layout.Text(c, "change_role_confirmation"),
+		h.layout.Markup(c, "personalAccount:change_role:confirmation"),
+	)
+	if err != nil {
+		h.logger.Errorf("(user: %d) error while edit message: %v", c.Sender().ID, err)
+		return c.Send(
+			banner.PersonalAccount.Caption(h.layout.Text(c, "technical_issues", err.Error())),
+			h.layout.Markup(c, "personalAccount:back"),
+		)
+	}
+
+	response, err := h.input.Get(
+		context.Background(),
+		c.Sender().ID,
+		0,
+		h.layout.Callback("changeRole:confirm"),
+		h.layout.Callback("changeRole:cancel"),
+	)
+	if err != nil {
+		h.logger.Errorf("(user: %d) error while get message: %v", c.Sender().ID, err)
+		return c.Send(
+			banner.PersonalAccount.Caption(h.layout.Text(c, "input_error", err.Error())),
+			h.layout.Markup(c, "personalAccount:back"),
+		)
+	}
+	if response.Callback == nil {
+		_ = c.Bot().Delete(response.Message)
+		_ = c.Bot().Delete(confirmationMessage)
+		h.logger.Errorf("(user: %d) error while get message: callback is nil", c.Sender().ID)
+		return c.Edit(
+			banner.PersonalAccount.Caption(h.layout.Text(c, "input_should_be_callback")),
+			h.layout.Markup(c, "personalAccount:back"),
+		)
+	}
+
+	_ = c.Bot().Delete(confirmationMessage)
+
+	if strings.Contains(response.Callback.Data, "cancel") {
+		return nil
+	}
+
+	err = c.Edit(
+		banner.PersonalAccount.Caption(h.layout.Text(c, "change_role_text")),
+		h.layout.Markup(c, "changeRole:choose_new_role"),
+	)
+	if err != nil {
+		h.logger.Errorf("(user: %d) error while edit message: %v", c.Sender().ID, err)
+		return c.Send(
+			banner.PersonalAccount.Caption(h.layout.Text(c, "technical_issues", err.Error())),
+			h.layout.Markup(c, "personalAccount:back"),
+		)
+	}
+
+	response, err = h.input.Get(
+		context.Background(),
+		c.Sender().ID,
+		0,
+		h.layout.Callback("changeRole:external_user"),
+		h.layout.Callback("changeRole:grant_user"),
+		h.layout.Callback("changeRole:student"),
+	)
+	if err != nil {
+		h.logger.Errorf("(user: %d) error while get message: %v", c.Sender().ID, err)
+		return c.Send(
+			banner.PersonalAccount.Caption(h.layout.Text(c, "input_error", err.Error())),
+			h.layout.Markup(c, "personalAccount:back"),
+		)
+	}
+	if response.Callback == nil {
+		_ = c.Bot().Delete(response.Message)
+		h.logger.Errorf("(user: %d) error while get message: callback is nil", c.Sender().ID)
+		return c.Edit(
+			banner.PersonalAccount.Caption(h.layout.Text(c, "input_should_be_callback")),
+			h.layout.Markup(c, "personalAccount:back"),
+		)
+	}
+
+	switch {
+	case strings.Contains(response.Callback.Data, "external_user"):
+		return h.changeRoleExternalUser(c)
+	case strings.Contains(response.Callback.Data, "grant_user"):
+		return h.changeRoleGrantUser(c)
+	case strings.Contains(response.Callback.Data, "student"):
+		return h.changeRoleStudent(c)
+	default:
+		return c.Edit(
+			banner.PersonalAccount.Caption(h.layout.Text(c, "technical_issues")),
+			h.layout.Markup(c, "personalAccount:back"),
+		)
+	}
+}
+
+func (h Handler) changeRoleExternalUser(c tele.Context) error {
+	err := h.userService.ChangeRole(context.Background(), c.Sender().ID, entity.ExternalUser, "")
+	if err != nil {
+		h.logger.Errorf("(user: %d) error while change role: %v", c.Sender().ID, err)
+		return c.Edit(
+			banner.PersonalAccount.Caption(h.layout.Text(c, "technical_issues")),
+			h.layout.Markup(c, "personalAccount:back"),
+		)
+	}
+	return h.personalAccount(c)
+}
+
+func (h Handler) changeRoleGrantUser(c tele.Context) error {
+	grantChatID := int64(viper.GetInt("bot.auth.grant-chat-id"))
+	member, err := c.Bot().ChatMemberOf(&tele.Chat{ID: grantChatID}, &tele.User{ID: c.Sender().ID})
+	if err != nil {
+		h.logger.Errorf("(user: %d) error while verification user's membership in the grant chat: %v", c.Sender().ID, err)
+		return c.Send(
+			banner.Auth.Caption(h.layout.Text(c, "technical_issues", err.Error())),
+			h.layout.Markup(c, "personalAccount:back"),
+		)
+	}
+
+	if member.Role != tele.Creator && member.Role != tele.Administrator && member.Role != tele.Member {
+		return c.Edit(
+			banner.Auth.Caption(h.layout.Text(c, "grant_user_required")),
+			h.layout.Markup(c, "personalAccount:back"),
+		)
+	}
+
+	err = h.userService.ChangeRole(context.Background(), c.Sender().ID, entity.GrantUser, "")
+	if err != nil {
+		h.logger.Errorf("(user: %d) error while change role: %v", c.Sender().ID, err)
+		return c.Edit(
+			banner.PersonalAccount.Caption(h.layout.Text(c, "technical_issues")),
+			h.layout.Markup(c, "personalAccount:back"),
+		)
+	}
+	return h.personalAccount(c)
+}
+
+func (h Handler) changeRoleStudent(c tele.Context) error {
+	inputCollector := collector.New()
+	_ = c.Edit(
+		banner.Auth.Caption(h.layout.Text(c, "email_request")),
+		h.layout.Markup(c, "personalAccount:back"),
+	)
+	inputCollector.Collect(c.Message())
+
+	var (
+		email     string
+		doneEmail bool
+	)
+	for {
+		response, errGet := h.input.Get(context.Background(), c.Sender().ID, 0)
+		if response.Message != nil {
+			inputCollector.Collect(response.Message)
+		}
+		switch {
+		case response.Canceled:
+			_ = inputCollector.Clear(c, collector.ClearOptions{IgnoreErrors: true, ExcludeLast: true})
+			return nil
+		case errGet != nil:
+			h.logger.Errorf("(user: %d) error while input email: %v", c.Sender().ID, errGet)
+			_ = inputCollector.Send(c,
+				banner.Auth.Caption(h.layout.Text(c, "input_error", h.layout.Text(c, "email_request"))),
+				h.layout.Markup(c, "personalAccount:back"),
+			)
+		case response.Message == nil:
+			h.logger.Errorf("(user: %d) error while input email: %v", c.Sender().ID, errGet)
+			_ = inputCollector.Send(c,
+				banner.Auth.Caption(h.layout.Text(c, "input_error", h.layout.Text(c, "email_request"))),
+				h.layout.Markup(c, "personalAccount:back"),
+			)
+		case !validator.Email(response.Message.Text, nil):
+			_ = inputCollector.Send(c,
+				banner.Auth.Caption(h.layout.Text(c, "invalid_email")),
+				h.layout.Markup(c, "personalAccount:back"),
+			)
+		case validator.Email(response.Message.Text, nil):
+			email = response.Message.Text
+			_, err := h.userService.GetByEmail(context.Background(), email)
+			if err == nil {
+				_ = inputCollector.Send(c,
+					banner.Auth.Caption(h.layout.Text(c, "user_with_this_email_already_exists")),
+					h.layout.Markup(c, "personalAccount:back"),
+				)
+				continue
+			}
+			doneEmail = true
+		}
+		if doneEmail {
+			break
+		}
+	}
+	_ = inputCollector.Clear(c, collector.ClearOptions{IgnoreErrors: true})
+
+	user, err := h.userService.Get(context.Background(), c.Sender().ID)
+	if err != nil {
+		h.logger.Errorf("(user: %d) error while get user: %v", c.Sender().ID, err)
+		return c.Send(
+			banner.PersonalAccount.Caption(h.layout.Text(c, "technical_issues", err.Error())),
+			h.layout.Markup(c, "personalAccount:back"),
+		)
+	}
+
+	canResend, _, err := h.codesStorage.GetCanResend(c.Sender().ID)
+	if err != nil {
+		h.logger.Errorf("(user: %d) error while getting auth code from redis: %v", c.Sender().ID, err)
+		return c.Send(
+			banner.Auth.Caption(h.layout.Text(c, "technical_issues", err.Error())),
+		)
+	}
+	var code string
+	if canResend {
+		loading, _ := c.Bot().Send(c.Chat(), h.layout.Text(c, "loading"))
+		code, err = h.userService.SendAuthCode(
+			context.Background(),
+			email,
+			c.Bot().Me.Username,
+		)
+		if err != nil {
+			_ = c.Bot().Delete(loading)
+			h.logger.Errorf("(user: %d) error while sending auth code: %v", c.Sender().ID, err)
+			return c.Send(
+				banner.Auth.Caption(h.layout.Text(c, "technical_issues", err.Error())),
+				h.layout.Markup(c, "personalAccount:back"),
+			)
+		}
+		_ = c.Bot().Delete(loading)
+
+		err = h.emailsStorage.Set(
+			c.Sender().ID,
+			email,
+			emails.EmailTypeChangingRole,
+			emails.EmailContext{
+				FIO: user.FIO,
+			},
+			viper.GetDuration("bot.session.email-ttl"),
+		)
+		if err != nil {
+			h.logger.Errorf("(user: %d) error while saving email to redis: %v", c.Sender().ID, err)
+			return c.Send(
+				banner.Auth.Caption(h.layout.Text(c, "technical_issues", err.Error())),
+				h.layout.Markup(c, "personalAccount:back"),
+			)
+		}
+
+		err = h.codesStorage.Set(
+			c.Sender().ID,
+			code,
+			codes.CodeTypeChangingRole,
+			codes.CodeContext{
+				Email: email,
+				FIO:   user.FIO,
+			},
+			viper.GetDuration("bot.session.auth-ttl"),
+			viper.GetDuration("bot.session.resend-ttl"),
+		)
+		if err != nil {
+			h.logger.Errorf("(user: %d) error while saving auth code to redis: %v", c.Sender().ID, err)
+			return c.Send(
+				banner.Auth.Caption(h.layout.Text(c, "technical_issues", err.Error())),
+				h.layout.Markup(c, "personalAccount:back"),
+			)
+		}
+
+		h.logger.Infof("(user: %d) auth code sent on %s", c.Sender().ID, email)
+
+		return c.Send(
+			banner.Auth.Caption(h.layout.Text(c, "email_auth_link_sent")),
+			h.layout.Markup(c, "changeRole:student:resendMenu"),
+		)
+	}
+
+	return c.Send(
+		banner.Auth.Caption(h.layout.Text(c,
+			"resend_timeout",
+			viper.GetDuration("bot.session.resend-ttl").Minutes()),
+		),
+		h.layout.Markup(c, "changeRole:student:resendMenu"),
+	)
+}
+
+func (h Handler) resendChangeRoleEmailConfirmationCode(c tele.Context) error {
+	h.logger.Infof("(user: %d) resend auth code", c.Sender().ID)
+
+	canResend, timeBeforeResend, err := h.codesStorage.GetCanResend(c.Sender().ID)
+	if err != nil {
+		h.logger.Errorf("(user: %d) error while getting auth code from redis: %v", c.Sender().ID, err)
+		return c.Send(
+			banner.Auth.Caption(h.layout.Text(c, "technical_issues", err.Error())),
+			h.layout.Markup(c, "personalAccount:back"),
+		)
+	}
+
+	var code string
+	var email emails.Email
+	if canResend {
+		email, err = h.emailsStorage.Get(c.Sender().ID)
+		if err != nil && !errors.Is(err, redis.Nil) {
+			h.logger.Errorf("(user: %d) error while getting user email from redis: %v", c.Sender().ID, err)
+			return c.Send(
+				banner.Auth.Caption(h.layout.Text(c, "technical_issues", err.Error())),
+				h.layout.Markup(c, "personalAccount:back"),
+			)
+		}
+
+		if errors.Is(err, redis.Nil) {
+			return c.Send(
+				banner.Auth.Caption(h.layout.Text(c, "session_expire")),
+				h.layout.Markup(c, "personalAccount:back"),
+			)
+		}
+
+		loading, _ := c.Bot().Send(c.Chat(), h.layout.Text(c, "loading"))
+		code, err = h.userService.SendAuthCode(
+			context.Background(),
+			email.Email,
+			c.Bot().Me.Username,
+		)
+		if err != nil {
+			_ = c.Bot().Delete(loading)
+			h.logger.Errorf("(user: %d) error while sending auth code: %v", c.Sender().ID, err)
+			return c.Send(
+				banner.Auth.Caption(h.layout.Text(c, "technical_issues", err.Error())),
+				h.layout.Markup(c, "personalAccount:back"),
+			)
+		}
+		_ = c.Bot().Delete(loading)
+
+		err = h.emailsStorage.Set(
+			c.Sender().ID,
+			email.Email,
+			emails.EmailTypeAuth,
+			email.EmailContext,
+			viper.GetDuration("bot.session.email-ttl"),
+		)
+		if err != nil {
+			h.logger.Errorf("(user: %d) error while saving user email to redis: %v", c.Sender().ID, err)
+			return c.Send(
+				banner.Auth.Caption(h.layout.Text(c, "technical_issues", err.Error())),
+				h.layout.Markup(c, "personalAccount:back"),
+			)
+		}
+		err = h.codesStorage.Set(
+			c.Sender().ID,
+			code,
+			codes.CodeTypeAuth,
+			codes.CodeContext{
+				Email: email.Email,
+				FIO:   email.EmailContext.FIO,
+			},
+			viper.GetDuration("bot.session.auth-ttl"),
+			viper.GetDuration("bot.session.resend-ttl"),
+		)
+		if err != nil {
+			h.logger.Errorf("(user: %d) error while saving auth code to redis: %v", c.Sender().ID, err)
+			return c.Send(
+				banner.Auth.Caption(h.layout.Text(c, "technical_issues", err.Error())),
+				h.layout.Markup(c, "personalAccount:back"),
+			)
+		}
+
+		h.logger.Infof("(user: %d) auth code sent on %s", c.Sender().ID, email.Email)
+
+		return c.Edit(
+			banner.Auth.Caption(h.layout.Text(c, "email_auth_link_resent")),
+			h.layout.Markup(c, "changeRole:student:resendMenu"),
+		)
+	}
+
+	return c.Respond(&tele.CallbackResponse{
+		Text: h.layout.Text(c,
+			"resend_timeout_with_time_before_resend",
+			math.Round(timeBeforeResend.Minutes()),
+		),
+		ShowAlert: true,
+	})
+}
+
 func (h Handler) UserSetup(group *tele.Group) {
 	// group.Handle(h.layout.Callback("mainMenu:cuClubs"), h.cuClubs)
 
@@ -1172,12 +1584,15 @@ func (h Handler) UserSetup(group *tele.Group) {
 
 	group.Handle(h.layout.Callback("mainMenu:personalAccount"), h.personalAccount)
 	group.Handle(h.layout.Callback("personalAccount:my_events"), h.myEvents)
-	group.Handle(h.layout.Callback("personalAccount:qr"), h.qrCode)
 	group.Handle(h.layout.Callback("user:myEvents:prev_page"), h.myEvents)
 	group.Handle(h.layout.Callback("user:myEvents:next_page"), h.myEvents)
 	group.Handle(h.layout.Callback("user:myEvents:event"), h.myEvent)
 	group.Handle(h.layout.Callback("user:myEvents:back"), h.myEvents)
+	group.Handle(h.layout.Callback("personalAccount:change_role"), h.changeRole)
+	group.Handle(h.layout.Callback("changeRole:student:resend_email"), h.resendChangeRoleEmailConfirmationCode)
 	group.Handle(h.layout.Callback("personalAccount:back"), h.personalAccount)
+
+	group.Handle(h.layout.Callback("mainMenu:qr"), h.qrCode)
 
 	group.Handle(h.layout.Callback("mailing:switch"), h.mailingSwitch)
 }
