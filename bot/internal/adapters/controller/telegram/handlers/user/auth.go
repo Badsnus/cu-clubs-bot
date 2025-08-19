@@ -529,7 +529,6 @@ func (h Handler) studentAuth(c tele.Context) error {
 		err = h.emailsStorage.Set(
 			c.Sender().ID,
 			email,
-			emails.EmailTypeAuth,
 			emails.EmailContext{
 				FIO: fio,
 			},
@@ -636,7 +635,6 @@ func (h Handler) resendAuthEmailConfirmationCode(c tele.Context) error {
 		err = h.emailsStorage.Set(
 			c.Sender().ID,
 			email.Email,
-			emails.EmailTypeAuth,
 			email.EmailContext,
 			viper.GetDuration("bot.session.email-ttl"),
 		)

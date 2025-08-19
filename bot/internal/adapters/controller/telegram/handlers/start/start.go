@@ -169,18 +169,18 @@ func (h Handler) Start(c tele.Context) error {
 
 	switch payloadType {
 	case "emailCode":
-		email, err := h.emailsStorage.Get(c.Sender().ID)
+		code, err := h.codesStorage.Get(c.Sender().ID)
 		if err != nil && !errors.Is(err, redis.Nil) {
 			h.logger.Errorf("(user: %d) error while getting user email from redis: %v", c.Sender().ID, err)
 			return c.Send(
-				h.layout.Text(c, "something_went_wrong"),
+				h.layout.Text(c, "wrong_code"),
 				h.layout.Markup(c, "core:hide"),
 			)
 		}
-		switch email.Type {
-		case emails.EmailTypeAuth:
+		switch code.Type {
+		case codes.CodeTypeAuth:
 			return h.auth(c, data)
-		case emails.EmailTypeChangingRole:
+		case codes.CodeTypeChangingRole:
 			return h.changeRole(c, data)
 		default:
 			h.logger.Errorf("(user: %d) invalid email type: %v", c.Sender().ID, err)

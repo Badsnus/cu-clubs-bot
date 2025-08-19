@@ -1306,14 +1306,14 @@ func (h Handler) changeRoleGrantUser(c tele.Context) error {
 	if err != nil {
 		h.logger.Errorf("(user: %d) error while verification user's membership in the grant chat: %v", c.Sender().ID, err)
 		return c.Send(
-			banner.Auth.Caption(h.layout.Text(c, "technical_issues", err.Error())),
+			banner.PersonalAccount.Caption(h.layout.Text(c, "technical_issues", err.Error())),
 			h.layout.Markup(c, "personalAccount:back"),
 		)
 	}
 
 	if member.Role != tele.Creator && member.Role != tele.Administrator && member.Role != tele.Member {
 		return c.Edit(
-			banner.Auth.Caption(h.layout.Text(c, "grant_user_required")),
+			banner.PersonalAccount.Caption(h.layout.Text(c, "grant_user_required")),
 			h.layout.Markup(c, "personalAccount:back"),
 		)
 	}
@@ -1332,7 +1332,7 @@ func (h Handler) changeRoleGrantUser(c tele.Context) error {
 func (h Handler) changeRoleStudent(c tele.Context) error {
 	inputCollector := collector.New()
 	_ = c.Edit(
-		banner.Auth.Caption(h.layout.Text(c, "email_request")),
+		banner.PersonalAccount.Caption(h.layout.Text(c, "email_request")),
 		h.layout.Markup(c, "personalAccount:back"),
 	)
 	inputCollector.Collect(c.Message())
@@ -1353,18 +1353,18 @@ func (h Handler) changeRoleStudent(c tele.Context) error {
 		case errGet != nil:
 			h.logger.Errorf("(user: %d) error while input email: %v", c.Sender().ID, errGet)
 			_ = inputCollector.Send(c,
-				banner.Auth.Caption(h.layout.Text(c, "input_error", h.layout.Text(c, "email_request"))),
+				banner.PersonalAccount.Caption(h.layout.Text(c, "input_error", h.layout.Text(c, "email_request"))),
 				h.layout.Markup(c, "personalAccount:back"),
 			)
 		case response.Message == nil:
 			h.logger.Errorf("(user: %d) error while input email: %v", c.Sender().ID, errGet)
 			_ = inputCollector.Send(c,
-				banner.Auth.Caption(h.layout.Text(c, "input_error", h.layout.Text(c, "email_request"))),
+				banner.PersonalAccount.Caption(h.layout.Text(c, "input_error", h.layout.Text(c, "email_request"))),
 				h.layout.Markup(c, "personalAccount:back"),
 			)
 		case !validator.Email(response.Message.Text, nil):
 			_ = inputCollector.Send(c,
-				banner.Auth.Caption(h.layout.Text(c, "invalid_email")),
+				banner.PersonalAccount.Caption(h.layout.Text(c, "invalid_email")),
 				h.layout.Markup(c, "personalAccount:back"),
 			)
 		case validator.Email(response.Message.Text, nil):
@@ -1372,7 +1372,7 @@ func (h Handler) changeRoleStudent(c tele.Context) error {
 			_, err := h.userService.GetByEmail(context.Background(), email)
 			if err == nil {
 				_ = inputCollector.Send(c,
-					banner.Auth.Caption(h.layout.Text(c, "user_with_this_email_already_exists")),
+					banner.PersonalAccount.Caption(h.layout.Text(c, "user_with_this_email_already_exists")),
 					h.layout.Markup(c, "personalAccount:back"),
 				)
 				continue
@@ -1413,7 +1413,7 @@ func (h Handler) changeRoleStudent(c tele.Context) error {
 			_ = c.Bot().Delete(loading)
 			h.logger.Errorf("(user: %d) error while sending auth code: %v", c.Sender().ID, err)
 			return c.Send(
-				banner.Auth.Caption(h.layout.Text(c, "technical_issues", err.Error())),
+				banner.PersonalAccount.Caption(h.layout.Text(c, "technical_issues", err.Error())),
 				h.layout.Markup(c, "personalAccount:back"),
 			)
 		}
@@ -1422,7 +1422,6 @@ func (h Handler) changeRoleStudent(c tele.Context) error {
 		err = h.emailsStorage.Set(
 			c.Sender().ID,
 			email,
-			emails.EmailTypeChangingRole,
 			emails.EmailContext{
 				FIO: user.FIO,
 			},
@@ -1431,7 +1430,7 @@ func (h Handler) changeRoleStudent(c tele.Context) error {
 		if err != nil {
 			h.logger.Errorf("(user: %d) error while saving email to redis: %v", c.Sender().ID, err)
 			return c.Send(
-				banner.Auth.Caption(h.layout.Text(c, "technical_issues", err.Error())),
+				banner.PersonalAccount.Caption(h.layout.Text(c, "technical_issues", err.Error())),
 				h.layout.Markup(c, "personalAccount:back"),
 			)
 		}
@@ -1450,7 +1449,7 @@ func (h Handler) changeRoleStudent(c tele.Context) error {
 		if err != nil {
 			h.logger.Errorf("(user: %d) error while saving auth code to redis: %v", c.Sender().ID, err)
 			return c.Send(
-				banner.Auth.Caption(h.layout.Text(c, "technical_issues", err.Error())),
+				banner.PersonalAccount.Caption(h.layout.Text(c, "technical_issues", err.Error())),
 				h.layout.Markup(c, "personalAccount:back"),
 			)
 		}
@@ -1458,7 +1457,7 @@ func (h Handler) changeRoleStudent(c tele.Context) error {
 		h.logger.Infof("(user: %d) auth code sent on %s", c.Sender().ID, email)
 
 		return c.Send(
-			banner.Auth.Caption(h.layout.Text(c, "email_auth_link_sent")),
+			banner.PersonalAccount.Caption(h.layout.Text(c, "email_auth_link_sent")),
 			h.layout.Markup(c, "changeRole:student:resendMenu"),
 		)
 	}
@@ -1479,7 +1478,7 @@ func (h Handler) resendChangeRoleEmailConfirmationCode(c tele.Context) error {
 	if err != nil {
 		h.logger.Errorf("(user: %d) error while getting auth code from redis: %v", c.Sender().ID, err)
 		return c.Send(
-			banner.Auth.Caption(h.layout.Text(c, "technical_issues", err.Error())),
+			banner.PersonalAccount.Caption(h.layout.Text(c, "technical_issues", err.Error())),
 			h.layout.Markup(c, "personalAccount:back"),
 		)
 	}
@@ -1491,14 +1490,14 @@ func (h Handler) resendChangeRoleEmailConfirmationCode(c tele.Context) error {
 		if err != nil && !errors.Is(err, redis.Nil) {
 			h.logger.Errorf("(user: %d) error while getting user email from redis: %v", c.Sender().ID, err)
 			return c.Send(
-				banner.Auth.Caption(h.layout.Text(c, "technical_issues", err.Error())),
+				banner.PersonalAccount.Caption(h.layout.Text(c, "technical_issues", err.Error())),
 				h.layout.Markup(c, "personalAccount:back"),
 			)
 		}
 
 		if errors.Is(err, redis.Nil) {
 			return c.Send(
-				banner.Auth.Caption(h.layout.Text(c, "session_expire")),
+				banner.PersonalAccount.Caption(h.layout.Text(c, "session_expire")),
 				h.layout.Markup(c, "personalAccount:back"),
 			)
 		}
@@ -1513,7 +1512,7 @@ func (h Handler) resendChangeRoleEmailConfirmationCode(c tele.Context) error {
 			_ = c.Bot().Delete(loading)
 			h.logger.Errorf("(user: %d) error while sending auth code: %v", c.Sender().ID, err)
 			return c.Send(
-				banner.Auth.Caption(h.layout.Text(c, "technical_issues", err.Error())),
+				banner.PersonalAccount.Caption(h.layout.Text(c, "technical_issues", err.Error())),
 				h.layout.Markup(c, "personalAccount:back"),
 			)
 		}
@@ -1522,14 +1521,13 @@ func (h Handler) resendChangeRoleEmailConfirmationCode(c tele.Context) error {
 		err = h.emailsStorage.Set(
 			c.Sender().ID,
 			email.Email,
-			emails.EmailTypeAuth,
 			email.EmailContext,
 			viper.GetDuration("bot.session.email-ttl"),
 		)
 		if err != nil {
 			h.logger.Errorf("(user: %d) error while saving user email to redis: %v", c.Sender().ID, err)
 			return c.Send(
-				banner.Auth.Caption(h.layout.Text(c, "technical_issues", err.Error())),
+				banner.PersonalAccount.Caption(h.layout.Text(c, "technical_issues", err.Error())),
 				h.layout.Markup(c, "personalAccount:back"),
 			)
 		}
@@ -1547,7 +1545,7 @@ func (h Handler) resendChangeRoleEmailConfirmationCode(c tele.Context) error {
 		if err != nil {
 			h.logger.Errorf("(user: %d) error while saving auth code to redis: %v", c.Sender().ID, err)
 			return c.Send(
-				banner.Auth.Caption(h.layout.Text(c, "technical_issues", err.Error())),
+				banner.PersonalAccount.Caption(h.layout.Text(c, "technical_issues", err.Error())),
 				h.layout.Markup(c, "personalAccount:back"),
 			)
 		}
@@ -1555,7 +1553,7 @@ func (h Handler) resendChangeRoleEmailConfirmationCode(c tele.Context) error {
 		h.logger.Infof("(user: %d) auth code sent on %s", c.Sender().ID, email.Email)
 
 		return c.Edit(
-			banner.Auth.Caption(h.layout.Text(c, "email_auth_link_resent")),
+			banner.PersonalAccount.Caption(h.layout.Text(c, "email_auth_link_resent")),
 			h.layout.Markup(c, "changeRole:student:resendMenu"),
 		)
 	}
