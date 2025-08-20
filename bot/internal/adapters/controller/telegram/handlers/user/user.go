@@ -1223,7 +1223,9 @@ func (h Handler) changeRole(c tele.Context) error {
 	}
 	if response.Callback == nil {
 		_ = c.Bot().Delete(response.Message)
-		_ = c.Bot().Delete(confirmationMessage)
+		if confirmationMessage != nil {
+			_ = c.Bot().Delete(confirmationMessage)
+		}
 		h.logger.Errorf("(user: %d) error while get message: callback is nil", c.Sender().ID)
 		return c.Edit(
 			banner.PersonalAccount.Caption(h.layout.Text(c, "input_should_be_callback")),
@@ -1231,7 +1233,9 @@ func (h Handler) changeRole(c tele.Context) error {
 		)
 	}
 
-	_ = c.Bot().Delete(confirmationMessage)
+	if confirmationMessage != nil {
+		_ = c.Bot().Delete(confirmationMessage)
+	}
 
 	if strings.Contains(response.Callback.Data, "cancel") {
 		return nil
