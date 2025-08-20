@@ -20,7 +20,7 @@ func (h Handler) auth(c tele.Context, authCode string) error {
 		if !errors.Is(err, redis.Nil) {
 			h.logger.Errorf("(user: %d) error while getting auth code from redis: %v", c.Sender().ID, err)
 			return c.Send(
-				h.layout.Text(c, "technical_issues", err.Error()),
+				h.layout.Text(c, "wrong_code", err.Error()),
 				h.layout.Markup(c, "core:hide"),
 			)
 		}
