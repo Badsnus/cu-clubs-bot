@@ -1534,7 +1534,7 @@ func (h Handler) resendChangeRoleEmailConfirmationCode(c tele.Context) error {
 		err = h.codesStorage.Set(
 			c.Sender().ID,
 			code,
-			codes.CodeTypeAuth,
+			codes.CodeTypeChangingRole,
 			codes.CodeContext{
 				Email: email.Email,
 				FIO:   email.EmailContext.FIO,

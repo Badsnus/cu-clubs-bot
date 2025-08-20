@@ -183,7 +183,7 @@ func (h Handler) Start(c tele.Context) error {
 		case codes.CodeTypeChangingRole:
 			return h.changeRole(c, data)
 		default:
-			h.logger.Errorf("(user: %d) invalid email type: %v", c.Sender().ID, err)
+			h.logger.Errorf("(user: %d) invalid code type: %v", c.Sender().ID, code.Type)
 			return c.Send(
 				h.layout.Text(c, "something_went_wrong"),
 				h.layout.Markup(c, "core:hide"),
