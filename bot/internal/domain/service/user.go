@@ -152,13 +152,29 @@ func (s *UserService) IgnoreMailing(ctx context.Context, userID int64, clubID st
 	return s.userStorage.IgnoreMailing(ctx, userID, clubID)
 }
 
+func (s *UserService) ChangeRole(
+	ctx context.Context,
+	userID int64,
+	role entity.Role,
+	email string,
+) error {
+	user, err := s.Get(ctx, userID)
+	if err != nil {
+		return err
+	}
+	user.Role = role
+	user.Email = email
+	_, err = s.Update(ctx, user)
+	return err
+}
+
 func generateAuthLink(codeLength int, botUserName string) (link string, code string, err error) {
 	code, err = generateRandomCode(codeLength)
 	if err != nil {
 		return link, code, err
 	}
 
-	return fmt.Sprintf("https://t.me/%s?start=auth_%s", botUserName, code), code, err
+	return fmt.Sprintf("https://t.me/%s?start=emailCode_%s", botUserName, code), code, err
 }
 
 func generateRandomCode(length int) (string, error) {

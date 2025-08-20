@@ -11,6 +11,13 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
+type CodeType string
+
+const (
+	CodeTypeChangingRole CodeType = "changing_role"
+	CodeTypeAuth         CodeType = "auth"
+)
+
 type Storage struct {
 	redis *redis.Client
 }
@@ -25,6 +32,7 @@ type Code struct {
 	Code        string      `json:"code"`
 	CodeContext CodeContext `json:"code_context"`
 	NextResend  time.Time   `json:"next_resend"`
+	Type        CodeType    `json:"type"`
 }
 
 type CodeContext struct {
@@ -70,6 +78,7 @@ func (s *Storage) GetCanResend(userID int64) (bool, time.Duration, error) {
 func (s *Storage) Set(
 	userID int64,
 	code string,
+	codeType CodeType,
 	codeContext CodeContext,
 	expiration time.Duration,
 	resendCooldown time.Duration,
@@ -78,6 +87,7 @@ func (s *Storage) Set(
 		Code:        code,
 		CodeContext: codeContext,
 		NextResend:  time.Now().UTC().Add(resendCooldown),
+		Type:        codeType,
 	}
 
 	jsonData, err := json.Marshal(codeData)

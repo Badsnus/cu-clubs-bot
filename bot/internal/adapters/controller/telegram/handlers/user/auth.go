@@ -36,6 +36,7 @@ func (h Handler) acceptPersonalDataAgreement(c tele.Context) error {
 
 func (h Handler) externalUserAuth(c tele.Context) error {
 	h.logger.Infof("(user: %d) external user auth", c.Sender().ID)
+
 	inputCollector := collector.New()
 	_ = c.Edit(
 		banner.Auth.Caption(h.layout.Text(c, "fio_request")),
@@ -509,18 +510,21 @@ func (h Handler) studentAuth(c tele.Context) error {
 	}
 	var code string
 	if canResend {
+		loading, _ := c.Bot().Send(c.Chat(), h.layout.Text(c, "loading"))
 		code, err = h.userService.SendAuthCode(
 			context.Background(),
 			email,
 			c.Bot().Me.Username,
 		)
 		if err != nil {
+			_ = c.Bot().Delete(loading)
 			h.logger.Errorf("(user: %d) error while sending auth code: %v", c.Sender().ID, err)
 			return c.Send(
 				banner.Auth.Caption(h.layout.Text(c, "technical_issues", err.Error())),
 				h.layout.Markup(c, "auth:backToMenu"),
 			)
 		}
+		_ = c.Bot().Delete(loading)
 
 		err = h.emailsStorage.Set(
 			c.Sender().ID,
@@ -541,6 +545,7 @@ func (h Handler) studentAuth(c tele.Context) error {
 		err = h.codesStorage.Set(
 			c.Sender().ID,
 			code,
+			codes.CodeTypeAuth,
 			codes.CodeContext{
 				Email: email,
 				FIO:   fio,
@@ -580,7 +585,7 @@ func (h Handler) backToAuthMenu(c tele.Context) error {
 	)
 }
 
-func (h Handler) resendEmailConfirmationCode(c tele.Context) error {
+func (h Handler) resendAuthEmailConfirmationCode(c tele.Context) error {
 	h.logger.Infof("(user: %d) resend auth code", c.Sender().ID)
 
 	canResend, timeBeforeResend, err := h.codesStorage.GetCanResend(c.Sender().ID)
@@ -588,6 +593,7 @@ func (h Handler) resendEmailConfirmationCode(c tele.Context) error {
 		h.logger.Errorf("(user: %d) error while getting auth code from redis: %v", c.Sender().ID, err)
 		return c.Send(
 			banner.Auth.Caption(h.layout.Text(c, "technical_issues", err.Error())),
+			h.layout.Markup(c, "core:hide"),
 		)
 	}
 
@@ -599,26 +605,32 @@ func (h Handler) resendEmailConfirmationCode(c tele.Context) error {
 			h.logger.Errorf("(user: %d) error while getting user email from redis: %v", c.Sender().ID, err)
 			return c.Send(
 				banner.Auth.Caption(h.layout.Text(c, "technical_issues", err.Error())),
+				h.layout.Markup(c, "core:hide"),
 			)
 		}
 
 		if errors.Is(err, redis.Nil) {
 			return c.Send(
 				banner.Auth.Caption(h.layout.Text(c, "session_expire")),
+				h.layout.Markup(c, "core:hide"),
 			)
 		}
 
+		loading, _ := c.Bot().Send(c.Chat(), h.layout.Text(c, "loading"))
 		code, err = h.userService.SendAuthCode(
 			context.Background(),
 			email.Email,
 			c.Bot().Me.Username,
 		)
 		if err != nil {
+			_ = c.Bot().Delete(loading)
 			h.logger.Errorf("(user: %d) error while sending auth code: %v", c.Sender().ID, err)
 			return c.Send(
 				banner.Auth.Caption(h.layout.Text(c, "technical_issues", err.Error())),
+				h.layout.Markup(c, "auth:backToMenu"),
 			)
 		}
+		_ = c.Bot().Delete(loading)
 
 		err = h.emailsStorage.Set(
 			c.Sender().ID,
@@ -630,11 +642,13 @@ func (h Handler) resendEmailConfirmationCode(c tele.Context) error {
 			h.logger.Errorf("(user: %d) error while saving user email to redis: %v", c.Sender().ID, err)
 			return c.Send(
 				banner.Auth.Caption(h.layout.Text(c, "technical_issues", err.Error())),
+				h.layout.Markup(c, "core:hide"),
 			)
 		}
 		err = h.codesStorage.Set(
 			c.Sender().ID,
 			code,
+			codes.CodeTypeAuth,
 			codes.CodeContext{
 				Email: email.Email,
 				FIO:   email.EmailContext.FIO,
@@ -646,6 +660,7 @@ func (h Handler) resendEmailConfirmationCode(c tele.Context) error {
 			h.logger.Errorf("(user: %d) error while saving auth code to redis: %v", c.Sender().ID, err)
 			return c.Send(
 				banner.Auth.Caption(h.layout.Text(c, "technical_issues", err.Error())),
+				h.layout.Markup(c, "core:hide"),
 			)
 		}
 
@@ -672,6 +687,6 @@ func (h Handler) AuthSetup(group *tele.Group) {
 	group.Handle(h.layout.Callback("auth:external_user"), h.externalUserAuth)
 	group.Handle(h.layout.Callback("auth:grant_user"), h.grantUserAuth)
 	group.Handle(h.layout.Callback("auth:student"), h.studentAuth)
-	group.Handle(h.layout.Callback("auth:resend_email"), h.resendEmailConfirmationCode)
+	group.Handle(h.layout.Callback("auth:resend_email"), h.resendAuthEmailConfirmationCode)
 	group.Handle(h.layout.Callback("auth:back_to_menu"), h.backToAuthMenu)
 }

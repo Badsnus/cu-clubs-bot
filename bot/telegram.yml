@@ -80,9 +80,40 @@ buttons:
     unique: personalAccount_myEvents
     text: '{{ text `my_events` }}'
 
-  personalAccount:qr:
-    unique: personalAccount_qr
+  mainMenu:qr:
+    unique: mainMenu_qr
     text: '{{ text `qr` }}'
+
+  personalAccount:change_role:
+    unique: personalAccount_changeRole
+    text: '{{ text `change_role` }}'
+
+  changeRole:confirm:
+    unique: changeRole_confirm
+    text: '{{ text `confirm` }}'
+
+  changeRole:cancel:
+    unique: changeRole_cancel
+    text: '{{ text `cancel` }}'
+
+  changeRole:external_user:
+    unique: changeRole_externalUser
+    callback_data: external_user
+    text: '{{ text `external_user` }}'
+
+  changeRole:grant_user:
+    unique: changeRole_grantUser
+    callback_data: grant_user
+    text: '{{ text `grant_user` }}'
+
+  changeRole:student:
+    unique: changeRole_student
+    callback_data: student
+    text: '{{ text `student` }}'
+
+  changeRole:student:resend_email:
+    unique: changeRole_student_resendEmail
+    text: '{{ text `resend` }}'
 
   personalAccount:back:
     unique: personalAccount_back
@@ -488,6 +519,7 @@ markups:
   mainMenu:menu:
     - [ mainMenu:events ]
     - [ mainMenu:personalAccount ]
+    - [ mainMenu:qr ]
   mainMenu:back:
     - [ mainMenu:back ]
 
@@ -497,10 +529,23 @@ markups:
 
   personalAccount:menu:
     - [ personalAccount:my_events ]
-    - [ personalAccount:qr ]
+    - [ personalAccount:change_role ]
     - [ mainMenu:back ]
+  personalAccount:change_role:confirmation:
+    - [changeRole:confirm]
+    - [changeRole:cancel]
+  changeRole:choose_new_role:
+    - [ changeRole:external_user ]
+    - [ changeRole:grant_user ]
+    - [ changeRole:student ]
+  changeRole:student:resendMenu:
+    - [ changeRole:student:resend_email ]
+    - [ core:hide ]
+
   personalAccount:back:
     - [ personalAccount:back ]
+
+
   user:events:back:
     - [ user:events:back ]
   user:events:event:
