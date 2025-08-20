@@ -96,11 +96,6 @@ buttons:
     unique: changeRole_cancel
     text: '{{ text `cancel` }}'
 
-  changeRole:external_user:
-    unique: changeRole_externalUser
-    callback_data: external_user
-    text: '{{ text `external_user` }}'
-
   changeRole:grant_user:
     unique: changeRole_grantUser
     callback_data: grant_user
@@ -529,13 +524,11 @@ markups:
 
   personalAccount:menu:
     - [ personalAccount:my_events ]
-    - [ personalAccount:change_role ]
     - [ mainMenu:back ]
   personalAccount:change_role:confirmation:
     - [changeRole:confirm]
     - [changeRole:cancel]
   changeRole:choose_new_role:
-    - [ changeRole:external_user ]
     - [ changeRole:grant_user ]
     - [ changeRole:student ]
   changeRole:student:resendMenu:

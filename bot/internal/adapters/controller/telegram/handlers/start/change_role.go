@@ -7,11 +7,13 @@ import (
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/utils/banner"
 	"github.com/redis/go-redis/v9"
 	tele "gopkg.in/telebot.v3"
+	"log"
 )
 
 func (h Handler) changeRole(c tele.Context, authCode string) error {
 	code, err := h.codesStorage.Get(c.Sender().ID)
 	if err != nil {
+		log.Println(err)
 		if !errors.Is(err, redis.Nil) {
 			h.logger.Errorf("(user: %d) error while getting auth code from redis: %v", c.Sender().ID, err)
 			return c.Send(

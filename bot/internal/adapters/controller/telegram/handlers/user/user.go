@@ -179,6 +179,17 @@ func (h Handler) personalAccount(c tele.Context) error {
 		)
 	}
 
+	// TODO: refactor
+	markup := h.layout.Markup(c, "personalAccount:menu")
+	if user.Role != entity.Student {
+		button := *h.layout.Button(c, "personalAccount:change_role").Inline()
+		newRow := []tele.InlineButton{button}
+
+		markup.InlineKeyboard = append(
+			markup.InlineKeyboard[:1],
+			append([][]tele.InlineButton{newRow}, markup.InlineKeyboard[1:]...)...,
+		)
+	}
 	return c.Edit(
 		banner.PersonalAccount.Caption(h.layout.Text(c, "personal_account_text", struct {
 			Name string
@@ -187,7 +198,7 @@ func (h Handler) personalAccount(c tele.Context) error {
 			Name: fio.Name,
 			Role: user.Role.String(),
 		})),
-		h.layout.Markup(c, "personalAccount:menu"),
+		markup,
 	)
 }
 
@@ -1194,6 +1205,15 @@ func (h Handler) mailingSwitch(c tele.Context) error {
 func (h Handler) changeRole(c tele.Context) error {
 	_ = c.Respond()
 
+	user, err := h.userService.Get(context.Background(), c.Sender().ID)
+	if err != nil {
+		h.logger.Errorf("(user: %d) error while getting user from db: %v", c.Sender().ID, err)
+		return c.Edit(
+			banner.Events.Caption(h.layout.Text(c, "technical_issues")),
+			h.layout.Markup(c, "personalAccount:back"),
+		)
+	}
+
 	confirmationMessage, err := c.Bot().Send(
 		c.Chat(),
 		h.layout.Text(c, "change_role_confirmation"),
@@ -1241,9 +1261,15 @@ func (h Handler) changeRole(c tele.Context) error {
 		return nil
 	}
 
+	// TODO: refactor
+	markup := h.layout.Markup(c, "changeRole:choose_new_role")
+	if user.Role == entity.GrantUser {
+		markup.InlineKeyboard = markup.InlineKeyboard[1:] // убираем возможность перехода к роли абитуриента
+	}
+
 	err = c.Edit(
 		banner.PersonalAccount.Caption(h.layout.Text(c, "change_role_text")),
-		h.layout.Markup(c, "changeRole:choose_new_role"),
+		markup,
 	)
 	if err != nil {
 		h.logger.Errorf("(user: %d) error while edit message: %v", c.Sender().ID, err)
@@ -1257,7 +1283,6 @@ func (h Handler) changeRole(c tele.Context) error {
 		context.Background(),
 		c.Sender().ID,
 		0,
-		h.layout.Callback("changeRole:external_user"),
 		h.layout.Callback("changeRole:grant_user"),
 		h.layout.Callback("changeRole:student"),
 	)
@@ -1278,8 +1303,6 @@ func (h Handler) changeRole(c tele.Context) error {
 	}
 
 	switch {
-	case strings.Contains(response.Callback.Data, "external_user"):
-		return h.changeRoleExternalUser(c)
 	case strings.Contains(response.Callback.Data, "grant_user"):
 		return h.changeRoleGrantUser(c)
 	case strings.Contains(response.Callback.Data, "student"):
@@ -1290,18 +1313,6 @@ func (h Handler) changeRole(c tele.Context) error {
 			h.layout.Markup(c, "personalAccount:back"),
 		)
 	}
-}
-
-func (h Handler) changeRoleExternalUser(c tele.Context) error {
-	err := h.userService.ChangeRole(context.Background(), c.Sender().ID, entity.ExternalUser, "")
-	if err != nil {
-		h.logger.Errorf("(user: %d) error while change role: %v", c.Sender().ID, err)
-		return c.Edit(
-			banner.PersonalAccount.Caption(h.layout.Text(c, "technical_issues")),
-			h.layout.Markup(c, "personalAccount:back"),
-		)
-	}
-	return h.personalAccount(c)
 }
 
 func (h Handler) changeRoleGrantUser(c tele.Context) error {
