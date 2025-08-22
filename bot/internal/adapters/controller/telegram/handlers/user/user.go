@@ -213,7 +213,7 @@ func (h Handler) qrCode(c tele.Context) error {
 		_ = c.Bot().Delete(loading)
 		return c.Edit(
 			banner.Menu.Caption(h.layout.Text(c, "technical_issues", err.Error())),
-			h.layout.Markup(c, "personalAccount:back"),
+			h.layout.Markup(c, "mainMenu:back"),
 		)
 	}
 	_ = c.Bot().Delete(loading)
