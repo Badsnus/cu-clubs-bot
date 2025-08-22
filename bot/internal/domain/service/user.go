@@ -6,8 +6,6 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
-	"strings"
-
 	"github.com/Badsnus/cu-clubs-bot/bot/pkg/smtp"
 
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/dto"
@@ -19,6 +17,7 @@ import (
 type UserStorage interface {
 	Create(ctx context.Context, user *entity.User) (*entity.User, error)
 	Get(ctx context.Context, id uint) (*entity.User, error)
+	GetByEmail(ctx context.Context, email string) (*entity.User, error)
 	GetByQRCodeID(ctx context.Context, qrCodeID string) (*entity.User, error)
 	GetMany(ctx context.Context, ids []int64) ([]entity.User, error)
 	GetAll(ctx context.Context) ([]entity.User, error)
@@ -29,10 +28,6 @@ type UserStorage interface {
 	GetUsersByEventID(ctx context.Context, eventID string) ([]entity.User, error)
 	GetUsersByClubID(ctx context.Context, clubID string) ([]entity.User, error)
 	IgnoreMailing(ctx context.Context, userID int64, clubID string) (bool, error)
-}
-
-type StudentDataStorage interface {
-	GetByLogin(ctx context.Context, login string) (*entity.StudentData, error)
 }
 
 type smtpClient interface {
@@ -46,17 +41,15 @@ type eventParticipantStorage interface {
 
 type UserService struct {
 	userStorage             UserStorage
-	studentDataStorage      StudentDataStorage
 	eventParticipantStorage eventParticipantStorage
 	smtpClient              smtpClient
 
 	emailHTMLFilePath string
 }
 
-func NewUserService(userStorage UserStorage, studentDataStorage StudentDataStorage, eventParticipantStorage eventParticipantStorage, smtpClient smtpClient, emailHTMLFilePath string) *UserService {
+func NewUserService(userStorage UserStorage, eventParticipantStorage eventParticipantStorage, smtpClient smtpClient, emailHTMLFilePath string) *UserService {
 	return &UserService{
 		userStorage:             userStorage,
-		studentDataStorage:      studentDataStorage,
 		eventParticipantStorage: eventParticipantStorage,
 		smtpClient:              smtpClient,
 
@@ -70,6 +63,10 @@ func (s *UserService) Create(ctx context.Context, user entity.User) (*entity.Use
 
 func (s *UserService) Get(ctx context.Context, userID int64) (*entity.User, error) {
 	return s.userStorage.Get(ctx, uint(userID))
+}
+
+func (s *UserService) GetByEmail(ctx context.Context, email string) (*entity.User, error) {
+	return s.userStorage.GetByEmail(ctx, email)
 }
 
 func (s *UserService) GetByQRCodeID(ctx context.Context, qrCodeID string) (*entity.User, error) {
@@ -132,34 +129,52 @@ func (s *UserService) CountUserEvents(ctx context.Context, userID int64) (int64,
 	return s.eventParticipantStorage.CountUserEvents(ctx, userID)
 }
 
-func (s *UserService) SendAuthCode(_ context.Context, email string) (string, string, error) {
-	code, err := generateRandomCode(12)
+func (s *UserService) SendAuthCode(_ context.Context, email string, botUserName string) (code string, err error) {
+	link, code, err := generateAuthLink(12, botUserName)
 	if err != nil {
-		return "", "", err
+		return "", err
 	}
-
-	login := strings.Split(email, "@")[0]
 
 	message, err := smtp.GenerateEmailConfirmationMessage(s.emailHTMLFilePath, map[string]string{
-		"Code": code,
+		"AuthLink": link,
 	})
 	if err != nil {
-		return "", "", err
+		return "", err
 	}
 
-	var data string
-	studentData, err := s.studentDataStorage.GetByLogin(context.Background(), login)
-	if err == nil {
-		s.smtpClient.Send(email, "Email confirmation", message, "Email confirmation", nil)
-		data = fmt.Sprintf("%s;%s", email, studentData.Fio)
-	}
+	s.smtpClient.Send(email, "Email confirmation", message, "Email confirmation", nil)
 
-	return data, code, nil
+	return code, nil
 }
 
 // IgnoreMailing is a function that allows or disallows mailing for a user (returns error and new state)
 func (s *UserService) IgnoreMailing(ctx context.Context, userID int64, clubID string) (bool, error) {
 	return s.userStorage.IgnoreMailing(ctx, userID, clubID)
+}
+
+func (s *UserService) ChangeRole(
+	ctx context.Context,
+	userID int64,
+	role entity.Role,
+	email string,
+) error {
+	user, err := s.Get(ctx, userID)
+	if err != nil {
+		return err
+	}
+	user.Role = role
+	user.Email = email
+	_, err = s.Update(ctx, user)
+	return err
+}
+
+func generateAuthLink(codeLength int, botUserName string) (link string, code string, err error) {
+	code, err = generateRandomCode(codeLength)
+	if err != nil {
+		return link, code, err
+	}
+
+	return fmt.Sprintf("https://t.me/%s?start=emailCode_%s", botUserName, code), code, err
 }
 
 func generateRandomCode(length int) (string, error) {

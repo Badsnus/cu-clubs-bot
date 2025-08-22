@@ -39,7 +39,7 @@ type Handler struct {
 
 func New(b *bot.Bot) *Handler {
 	userStorageLocal := postgres.NewUserStorage(b.DB)
-	userServiceLocal := service.NewUserService(userStorageLocal, nil, nil, nil, "")
+	userServiceLocal := service.NewUserService(userStorageLocal, nil, nil, "")
 	clubStorage := postgres.NewClubStorage(b.DB)
 
 	return &Handler{

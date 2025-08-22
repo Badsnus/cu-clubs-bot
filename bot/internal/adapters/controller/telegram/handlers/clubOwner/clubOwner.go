@@ -123,7 +123,7 @@ func NewHandler(b *bot.Bot) *Handler {
 
 		clubService:             service.NewClubService(clubStorage),
 		clubOwnerService:        service.NewClubOwnerService(clubOwnerStorage, userStorage),
-		userService:             service.NewUserService(userStorage, nil, nil, nil, ""),
+		userService:             service.NewUserService(userStorage, nil, nil, ""),
 		eventService:            eventSrvc,
 		eventParticipantService: service.NewEventParticipantService(nil, nil, nil, eventParticipantStorage, nil, nil, nil, nil, nil, 0),
 		qrService:               qrSrvc,

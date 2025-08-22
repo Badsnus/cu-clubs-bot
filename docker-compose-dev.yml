@@ -39,8 +39,8 @@ services:
     container_name: redis
     image: 'redis:latest'
     command: redis-server --requirepass ${REDIS_PASSWORD} --port ${REDIS_PORT}
-    expose:
-      - ${REDIS_PORT}
+    ports:
+      - ${REDIS_PORT}:${REDIS_PORT}
     volumes:
       - redis-data:/data
     restart: always

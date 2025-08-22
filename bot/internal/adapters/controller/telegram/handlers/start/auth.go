@@ -7,7 +7,6 @@ import (
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/utils/banner"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/utils/location"
 	"gorm.io/gorm"
-	"strings"
 	"time"
 
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/entity"
@@ -21,7 +20,7 @@ func (h Handler) auth(c tele.Context, authCode string) error {
 		if !errors.Is(err, redis.Nil) {
 			h.logger.Errorf("(user: %d) error while getting auth code from redis: %v", c.Sender().ID, err)
 			return c.Send(
-				h.layout.Text(c, "technical_issues", err.Error()),
+				h.layout.Text(c, "wrong_code", err.Error()),
 				h.layout.Markup(c, "core:hide"),
 			)
 		}
@@ -33,19 +32,16 @@ func (h Handler) auth(c tele.Context, authCode string) error {
 
 	if authCode != code.Code {
 		return c.Send(
-			h.layout.Text(c, "something_went_wrong"),
+			h.layout.Text(c, "wrong_code"),
 			h.layout.Markup(c, "core:hide"),
 		)
 	}
 
-	data := strings.Split(code.CodeContext, ";")
-	email, fio := data[0], data[1]
-
 	newUser := entity.User{
 		ID:    c.Sender().ID,
 		Role:  entity.Student,
-		Email: email,
-		FIO:   fio,
+		Email: code.CodeContext.Email,
+		FIO:   code.CodeContext.FIO,
 	}
 
 	_, err = h.userService.Create(context.Background(), newUser)
@@ -58,8 +54,22 @@ func (h Handler) auth(c tele.Context, authCode string) error {
 	}
 	h.logger.Infof("(user: %d) new user created(role: %s)", c.Sender().ID, newUser.Role)
 
-	h.codesStorage.Clear(c.Sender().ID)
-	h.emailsStorage.Clear(c.Sender().ID)
+	err = h.codesStorage.Clear(c.Sender().ID)
+	if err != nil {
+		h.logger.Errorf("(user: %d) error while clearing auth code from redis: %v", c.Sender().ID, err)
+		return c.Send(
+			h.layout.Text(c, "technical_issues", err.Error()),
+			h.layout.Markup(c, "core:hide"),
+		)
+	}
+	err = h.emailsStorage.Clear(c.Sender().ID)
+	if err != nil {
+		h.logger.Errorf("(user: %d) error while clearing email from redis: %v", c.Sender().ID, err)
+		return c.Send(
+			h.layout.Text(c, "technical_issues", err.Error()),
+			h.layout.Markup(c, "core:hide"),
+		)
+	}
 
 	user, err := h.userService.Get(context.Background(), c.Sender().ID)
 	if err != nil {

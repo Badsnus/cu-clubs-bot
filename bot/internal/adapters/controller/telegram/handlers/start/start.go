@@ -7,6 +7,7 @@ import (
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/database/redis/events"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/utils/banner"
 	qr "github.com/Badsnus/cu-clubs-bot/bot/pkg/qrcode"
+	"github.com/redis/go-redis/v9"
 	"github.com/spf13/viper"
 	"strings"
 	"time"
@@ -29,6 +30,12 @@ type userService interface {
 	Get(ctx context.Context, userID int64) (*entity.User, error)
 	GetByQRCodeID(ctx context.Context, qrCodeID string) (*entity.User, error)
 	Update(ctx context.Context, user *entity.User) (*entity.User, error)
+	ChangeRole(
+		ctx context.Context,
+		userID int64,
+		role entity.Role,
+		email string,
+	) error
 }
 
 type clubService interface {
@@ -85,14 +92,13 @@ type Handler struct {
 
 func New(b *bot.Bot) *Handler {
 	userStorage := postgres.NewUserStorage(b.DB)
-	studentDataStorage := postgres.NewStudentDataStorage(b.DB)
 	eventStorage := postgres.NewEventStorage(b.DB)
 	clubStorage := postgres.NewClubStorage(b.DB)
 	eventParticipantStorage := postgres.NewEventParticipantStorage(b.DB)
 	clubOwnerStorage := postgres.NewClubOwnerStorage(b.DB)
 	notificationStorage := postgres.NewNotificationStorage(b.DB)
 
-	userSrvc := service.NewUserService(userStorage, studentDataStorage, nil, nil, "")
+	userSrvc := service.NewUserService(userStorage, nil, nil, "")
 	eventSrvc := service.NewEventService(eventStorage)
 	clubOwnerSrvc := service.NewClubOwnerService(clubOwnerStorage, userStorage)
 
@@ -162,14 +168,37 @@ func (h Handler) Start(c tele.Context) error {
 	}
 
 	switch payloadType {
-	case "auth":
-		return h.auth(c, data)
+	case "emailCode":
+		code, err := h.codesStorage.Get(c.Sender().ID)
+		if err != nil && !errors.Is(err, redis.Nil) {
+			h.logger.Errorf("(user: %d) error while getting user email from redis: %v", c.Sender().ID, err)
+			return c.Send(
+				h.layout.Text(c, "wrong_code"),
+				h.layout.Markup(c, "core:hide"),
+			)
+		}
+		switch code.Type {
+		case codes.CodeTypeAuth:
+			return h.auth(c, data)
+		case codes.CodeTypeChangingRole:
+			return h.changeRole(c, data)
+		default:
+			h.logger.Errorf("(user: %d) invalid code type: %v", c.Sender().ID, code.Type)
+			return c.Send(
+				h.layout.Text(c, "something_went_wrong"),
+				h.layout.Markup(c, "core:hide"),
+			)
+		}
+
 	case "userQR":
 		return h.userQR(c, data)
+
 	case "eventQR":
 		return h.eventQR(c, data)
+
 	case "event":
 		return h.eventMenu(c, data)
+
 	default:
 		return c.Send(
 			h.layout.Text(c, "something_went_wrong"),

@@ -27,7 +27,6 @@ technical_issues: |-
   <b>❌ Возникла непредвиденная техническая ошибка</b>
 
   <i>Обратитесь в поддержку</i>
-  <blockquote>{{html .}}</blockquote>
 next: |-
   >
 prev: |-
@@ -38,7 +37,8 @@ cross: ❌
 # error
 input_error: |-
   <b>Во время ввода произошла непредвиденная ошибка</b>
-  {{html .}}
+input_should_be_callback: |-
+  <b>Ответ не должен содержать текст, используйте кнопки</b>
 
 auth_required: |-
   Вы ещё не авторизованы ❌
@@ -46,8 +46,13 @@ auth_required: |-
   <i>Пожалуйста, пропишите /start для авторизации</i>
 grant_user_required: Вы не находитесь в чате грантовиков ❌
 resend: Отправить повторно
-resend_timeout: Код можно отправить раз в 10 минут.
+resend_timeout: |-
+  Код можно отправить раз в {{.}} минут.
+resend_timeout_with_time_before_resend: |-
+  Код можно будет отправить через {{.}} минут
 session_expire: Сессия устарела, начините регистрацию сначала /start.
+wrong_code: |-
+  <b>Неверный код</b>, возможно вы перешли по ссылке в устаревшем письме
 something_went_wrong: Что-то пошло не так, начните сначала /start.
 
 # logging
@@ -74,7 +79,7 @@ external_user: Внешний пользователь
 grant_user: Грантовик
 student: Студент
 fio_request: |-
-  <b>Пожалуйста, введите ваши ФИО для завершения авторизации.</b>
+  <b>Пожалуйста, введите ваши ФИО.</b>
 
   <i>Пример: Иванов Иван Иванович</i>
 invalid_user_fio: |-
@@ -82,9 +87,13 @@ invalid_user_fio: |-
 
   <i>Попробуйте ещё раз</i>
 email_request: |-
-  <b>Пожалуйста, укажите вашу почту для авторизации.</b>
+  <b>Пожалуйста, укажите вашу студенческую почту.</b>
 invalid_email: |-
   <b>Некорректный почтовый адрес.</b>
+
+  <i>Попробуйте ещё раз</i>
+user_with_this_email_already_exists: |-
+  <b>Пользователь с данной почтой уже существует.</b>
 
   <i>Попробуйте ещё раз</i>
 email_auth_link_sent: |-
@@ -93,11 +102,18 @@ email_auth_link_resent: |-
   <b>Ссылка на вашу почту была отправлена ещё раз! Пожалуйста, перейдите по ней для завершения авторизации</b>
 # main menu
 main_menu_text: |-
-  <b>Главное меню:</b>
+  <b>Главное меню</b>
 events: Мероприятия
 cu_clubs: Клубы ЦУ
 personal_account: Личный кабинет
-personal_account_text: Добро пожаловать в личный кабинет
+personal_account_text: |- 
+  <i>Добро пожаловать {{.Name}}, ваша роль <b>{{if eq .Role "student"}}студент{{else if eq .Role "grant_user"}}абитуриент{{else if eq .Role "external_user"}}внешний пользователь{{else}}не определена{{end}}</b></i>
+change_role: Изменить роль
+change_role_confirmation: |-
+  Вы <b>уверены</b> что хотите сменить свою роль?
+change_role_text: |-
+  <b>Выберите вашу новую роль</b>
+
 my_events: Мои мероприятия
 my_clubs: Мои клубы
 admin_menu: Админ-меню

@@ -1,6 +1,8 @@
 package entity
 
 import (
+	"fmt"
+	"strings"
 	"time"
 )
 
@@ -56,6 +58,25 @@ type IgnoreMailing struct {
 	UserID    int64  `gorm:"primaryKey"`
 	ClubID    string `gorm:"primaryKey;type:uuid"`
 	CreatedAt time.Time
+}
+
+type FIO struct {
+	Surname    string
+	Name       string
+	Patronymic string
+}
+
+func (u *User) ParseFIO() (FIO, error) {
+	fioSlice := strings.Split(u.FIO, " ")
+	if len(fioSlice) < 3 {
+		return FIO{}, fmt.Errorf("invalid fio")
+	}
+
+	return FIO{
+		Surname:    fioSlice[0],
+		Name:       fioSlice[1],
+		Patronymic: strings.Join(fioSlice[2:], " "),
+	}, nil
 }
 
 func (u *User) IsMailingAllowed(clubID string) bool {
