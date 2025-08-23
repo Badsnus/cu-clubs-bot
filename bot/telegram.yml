@@ -226,6 +226,11 @@ buttons:
     callback_data: '{{.ID}}'
     text: '{{ text `profile` }}'
 
+  clubOwner:club:settings:profile:back:
+    unique: clubOwner_cl_prof_back
+    callback_data: '{{.ID}}'
+    text: '{{ text `back` }}'
+
   clubOwner:club:settings:profile:set_name:
     unique: clubOwner_club_setName
     callback_data: '{{.ID}}'
@@ -250,6 +255,11 @@ buttons:
     unique: clubOwner_club_setIntro
     callback_data: '{{.ID}}'
     text: '{{ text `set_club_intro` }}'
+
+  clubOwner:club:settings:profile:should_show:
+    unique: clubOwner_club_shouldShow
+    callback_data: '{{.ID}}'
+    text: '{{ if .ShouldShow }}{{ text `show_in_menu` }}{{ else }}{{ text `not_show_in_menu` }}{{ end }}'
 
   clubOwner:club:settings:warnings:
     unique: clubOwner_club_warnings
@@ -501,12 +511,10 @@ buttons:
   # cu clubs tour functionality
   mainMenu:cuClubs:
     unique: mainMenu_cuClubs
-    callback_data: cuClubs:clubs
     text: '{{ text `cu_clubs` }}'
 
   mainMenu:personalAccount:
     unique: mainMenu_personalAccount
-    callback_data: mainMenu_personalAccount
     text: '{{ text `personal_account` }}'
 
 
@@ -580,8 +588,6 @@ markups:
     - [ clubOwner:club:mailing ]
     - [ clubOwner:club:settings ]
   clubOwner:club:settings:
-#    - [ clubOwner:club:settings:edit_name ]
-#    - [ clubOwner:club:settings:edit_description ]
     - [ clubOwner:club:settings:add_owner ]
     - [ clubOwner:club:settings:warnings ]
     - [ clubOwner:club:settings:profile ]
@@ -591,12 +597,14 @@ markups:
   clubOwner:club:settings:warnings:
     - [ clubOwner:club:settings:back ]
   clubOwner:club:settings:profile:
-    - [ clubOwner:club:settings:profile:set_name ]
-    - [ clubOwner:club:settings:profile:set_description ]
+    - [ clubOwner:club:settings:profile:set_name, clubOwner:club:settings:profile:set_description ]
     - [ clubOwner:club:settings:profile:set_link ]
-    - [ clubOwner:club:settings:profile:set_avatar ]
-    - [ clubOwner:club:settings:profile:set_intro ]
+    - [ clubOwner:club:settings:profile:set_avatar, clubOwner:club:settings:profile:set_intro ]
+    - [ clubOwner:club:settings:profile:should_show ]
     - [ clubOwner:club:settings:back ]
+  clubOwner:club:settings:profile:back:
+    - [ clubOwner:club:settings:profile:back ]
+
   clubOwner:club:back:
     - [ clubOwner:club:back ]
   clubOwner:createClub:confirm:

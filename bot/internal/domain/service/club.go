@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	tele "gopkg.in/telebot.v3"
 
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/entity"
 )
@@ -17,11 +18,13 @@ type ClubStorage interface {
 }
 
 type ClubService struct {
+	bot     *tele.Bot
 	storage ClubStorage
 }
 
-func NewClubService(storage ClubStorage) *ClubService {
+func NewClubService(bot *tele.Bot, storage ClubStorage) *ClubService {
 	return &ClubService{
+		bot:     bot,
 		storage: storage,
 	}
 }
@@ -52,4 +55,40 @@ func (s *ClubService) Delete(ctx context.Context, id string) error {
 
 func (s *ClubService) Count(ctx context.Context) (int64, error) {
 	return s.storage.Count(ctx)
+}
+
+func (s *ClubService) GetAvatar(ctx context.Context, id string) (*tele.File, error) {
+	club, err := s.storage.Get(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+
+	if club.AvatarID == "" {
+		return nil, nil
+	}
+
+	file, err := s.bot.FileByID(club.AvatarID)
+	if err != nil {
+		return nil, err
+	}
+
+	return &file, nil
+}
+
+func (s *ClubService) GetIntro(ctx context.Context, id string) (*tele.File, error) {
+	club, err := s.storage.Get(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+
+	if club.IntroID == "" {
+		return nil, nil
+	}
+
+	file, err := s.bot.FileByID(club.IntroID)
+	if err != nil {
+		return nil, err
+	}
+
+	return &file, nil
 }

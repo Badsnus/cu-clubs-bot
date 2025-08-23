@@ -116,7 +116,7 @@ func New(b *bot.Bot) *Handler {
 
 	return &Handler{
 		userService:             userSrvc,
-		clubService:             service.NewClubService(clubStorage),
+		clubService:             service.NewClubService(b.Bot, clubStorage),
 		eventService:            eventSrvc,
 		eventParticipantService: service.NewEventParticipantService(b.Bot, b.Layout, b.Logger, eventParticipantStorage, nil, nil, nil, nil, nil, 0),
 		qrService:               qrSrvc,

@@ -37,6 +37,8 @@ type clubService interface {
 	Get(ctx context.Context, id string) (*entity.Club, error)
 	GetByOwnerID(ctx context.Context, id int64) ([]entity.Club, error)
 	Update(ctx context.Context, club *entity.Club) (*entity.Club, error)
+	GetAvatar(ctx context.Context, id string) (*tele.File, error)
+	GetIntro(ctx context.Context, id string) (*tele.File, error)
 }
 
 type clubOwnerService interface {
@@ -76,6 +78,7 @@ type notificationService interface {
 }
 
 type Handler struct {
+	bot    *tele.Bot
 	layout *layout.Layout
 	logger *types.Logger
 	input  *intele.InputManager
@@ -91,6 +94,8 @@ type Handler struct {
 	notificationService     notificationService
 
 	mailingChannelID int64
+	avatarChannelID  int64
+	introChannelID   int64
 }
 
 func NewHandler(b *bot.Bot) *Handler {
@@ -115,13 +120,14 @@ func NewHandler(b *bot.Bot) *Handler {
 	}
 
 	return &Handler{
+		bot:    b.Bot,
 		layout: b.Layout,
 		logger: b.Logger,
 		input:  b.Input,
 
 		eventsStorage: b.Redis.Events,
 
-		clubService:             service.NewClubService(clubStorage),
+		clubService:             service.NewClubService(b.Bot, clubStorage),
 		clubOwnerService:        service.NewClubOwnerService(clubOwnerStorage, userStorage),
 		userService:             service.NewUserService(userStorage, nil, nil, ""),
 		eventService:            eventSrvc,
@@ -138,6 +144,8 @@ func NewHandler(b *bot.Bot) *Handler {
 		),
 
 		mailingChannelID: viper.GetInt64("bot.mailing.channel-id"),
+		avatarChannelID:  viper.GetInt64("bot.avatar.channel-id"),
+		introChannelID:   viper.GetInt64("bot.intro.channel-id"),
 	}
 }
 
@@ -223,14 +231,65 @@ func (h Handler) clubMenu(c tele.Context) error {
 		ID: clubID,
 	})
 
-	if len(clubs) == 1 {
-		menuMarkup.InlineKeyboard = append(menuMarkup.InlineKeyboard, []tele.InlineButton{*h.layout.Button(c, "mainMenu:back").Inline()})
-	}
-	if len(clubs) > 1 {
+	if len(clubs) > 0 {
 		menuMarkup.InlineKeyboard = append(menuMarkup.InlineKeyboard, []tele.InlineButton{*h.layout.Button(c, "clubOwner:myClubs:back").Inline()})
 	}
 
-	return c.Edit(
+	clubAvatar, err := h.clubService.GetAvatar(context.Background(), club.ID)
+	if err != nil {
+		h.logger.Errorf("(user: %d) error while get clubs: %v", c.Sender().ID, err)
+		return c.Send(
+			banner.ClubOwner.Caption(h.layout.Text(c, "clubs", err.Error())),
+			h.layout.Markup(c, "mainMenu:back"),
+		)
+	}
+
+	clubIntro, err := h.clubService.GetIntro(context.Background(), club.ID)
+	if err != nil {
+		h.logger.Errorf("(user: %d) error while get clubs: %v", c.Sender().ID, err)
+		return c.Send(
+			banner.ClubOwner.Caption(h.layout.Text(c, "clubs", err.Error())),
+			h.layout.Markup(c, "mainMenu:back"),
+		)
+	}
+
+	_ = c.Delete()
+
+	if clubIntro != nil {
+		videoNote := &tele.VideoNote{
+			File: *clubIntro,
+		}
+
+		_ = c.Send(videoNote, h.layout.Markup(c, "core:hide"))
+	}
+
+	if clubAvatar != nil {
+		caption := &tele.Photo{
+			File: tele.File{
+				FileID:     clubAvatar.FileID,
+				UniqueID:   clubAvatar.UniqueID,
+				FileSize:   clubAvatar.FileSize,
+				FilePath:   clubAvatar.FilePath,
+				FileLocal:  clubAvatar.FileLocal,
+				FileURL:    clubAvatar.FileURL,
+				FileReader: clubAvatar.FileReader,
+			},
+			Caption: h.layout.Text(c, "club_owner_club_menu_text", struct {
+				Club   entity.Club
+				Owners []dto.ClubOwner
+			}{
+				Club:   *club,
+				Owners: clubOwners,
+			}),
+		}
+
+		return c.Send(
+			caption,
+			menuMarkup,
+		)
+	}
+
+	return c.Send(
 		banner.ClubOwner.Caption(h.layout.Text(c, "club_owner_club_menu_text", struct {
 			Club   entity.Club
 			Owners []dto.ClubOwner
@@ -488,213 +547,6 @@ func (h Handler) clubSettings(c tele.Context) error {
 	)
 }
 
-func (h Handler) editName(c tele.Context) error {
-	h.logger.Infof("(user: %d) edit club name", c.Sender().ID)
-
-	club, err := h.clubService.Get(context.Background(), c.Callback().Data)
-	if err != nil {
-		h.logger.Errorf("(user: %d) error while get club: %v", c.Sender().ID, err)
-		return c.Send(
-			banner.ClubOwner.Caption(h.layout.Text(c, "technical_issues", err.Error())),
-			h.layout.Markup(c, "mainMenu:back"),
-		)
-	}
-
-	inputCollector := collector.New()
-	_ = c.Edit(
-		banner.ClubOwner.Caption(h.layout.Text(c, "input_club_name")),
-		h.layout.Markup(c, "clubOwner:club:settings:back", struct {
-			ID string
-		}{
-			ID: club.ID,
-		}),
-	)
-	inputCollector.Collect(c.Message())
-
-	var (
-		clubName string
-		done     bool
-	)
-	for {
-		response, errGet := h.input.Get(context.Background(), c.Sender().ID, 0)
-		if response.Message != nil {
-			inputCollector.Collect(response.Message)
-		}
-		switch {
-		case response.Canceled:
-			_ = inputCollector.Clear(c, collector.ClearOptions{IgnoreErrors: true, ExcludeLast: true})
-			return nil
-		case errGet != nil:
-			h.logger.Errorf("(user: %d) error while input club name: %v", c.Sender().ID, errGet)
-			_ = inputCollector.Send(c,
-				banner.ClubOwner.Caption(h.layout.Text(c, "input_error", h.layout.Text(c, "input_club_name"))),
-				h.layout.Markup(c, "clubOwner:club:settings:back", struct {
-					ID string
-				}{
-					ID: club.ID,
-				}),
-			)
-		case response.Message == nil:
-			_ = inputCollector.Send(c,
-				banner.ClubOwner.Caption(h.layout.Text(c, "input_error", h.layout.Text(c, "input_club_description"))),
-				h.layout.Markup(c, "clubOwner:club:settings:back", struct {
-					ID string
-				}{
-					ID: club.ID,
-				}),
-			)
-		case !validator.ClubName(response.Message.Text, nil):
-			_ = inputCollector.Send(c,
-				banner.ClubOwner.Caption(h.layout.Text(c, "invalid_club_name")),
-				h.layout.Markup(c, "clubOwner:club:settings:back", struct {
-					ID string
-				}{
-					ID: club.ID,
-				}),
-			)
-		case validator.ClubName(response.Message.Text, nil):
-			clubName = response.Message.Text
-			_ = inputCollector.Clear(c, collector.ClearOptions{IgnoreErrors: true})
-			done = true
-		}
-		if done {
-			break
-		}
-	}
-
-	club.Name = clubName
-	_, err = h.clubService.Update(context.Background(), club)
-	if err != nil {
-		if errors.Is(err, gorm.ErrDuplicatedKey) {
-			return c.Send(
-				banner.Menu.Caption(h.layout.Text(c, "club_already_exists")),
-				h.layout.Markup(c, "clubOwner:club:settings:back", struct {
-					ID string
-				}{
-					ID: club.ID,
-				}),
-			)
-		}
-
-		h.logger.Errorf("(user: %d) error while update club name: %v", c.Sender().ID, err)
-		return c.Send(
-			banner.ClubOwner.Caption(h.layout.Text(c, "technical_issues", err.Error())),
-			h.layout.Markup(c, "clubOwner:club:settings:back", struct {
-				ID string
-			}{
-				ID: club.ID,
-			}),
-		)
-	}
-
-	return c.Send(
-		banner.ClubOwner.Caption(h.layout.Text(c, "name_changed")),
-		h.layout.Markup(c, "clubOwner:club:settings:back", struct {
-			ID string
-		}{
-			ID: club.ID,
-		}),
-	)
-}
-
-func (h Handler) editDescription(c tele.Context) error {
-	h.logger.Infof("(user: %d) edit club description", c.Sender().ID)
-
-	club, err := h.clubService.Get(context.Background(), c.Callback().Data)
-	if err != nil {
-		h.logger.Errorf("(user: %d) error while get club: %v", c.Sender().ID, err)
-		return c.Send(
-			banner.ClubOwner.Caption(h.layout.Text(c, "technical_issues", err.Error())),
-			h.layout.Markup(c, "mainMenu:back"),
-		)
-	}
-
-	inputCollector := collector.New()
-	_ = c.Edit(
-		banner.ClubOwner.Caption(h.layout.Text(c, "input_club_description")),
-		h.layout.Markup(c, "clubOwner:club:settings:back", struct {
-			ID string
-		}{
-			ID: club.ID,
-		}),
-	)
-	inputCollector.Collect(c.Message())
-
-	var (
-		clubDescription string
-		done            bool
-	)
-	for {
-		response, errGet := h.input.Get(context.Background(), c.Sender().ID, 0)
-		if response.Message != nil {
-			inputCollector.Collect(response.Message)
-		}
-		switch {
-		case response.Canceled:
-			_ = inputCollector.Clear(c, collector.ClearOptions{IgnoreErrors: true, ExcludeLast: true})
-			return nil
-		case errGet != nil:
-			h.logger.Errorf("(user: %d) error while input club name: %v", c.Sender().ID, errGet)
-			_ = inputCollector.Send(c,
-				banner.ClubOwner.Caption(h.layout.Text(c, "input_error", h.layout.Text(c, "input_club_description"))),
-				h.layout.Markup(c, "clubOwner:club:settings:back", struct {
-					ID string
-				}{
-					ID: club.ID,
-				}),
-			)
-		case response.Message == nil:
-			_ = inputCollector.Send(c,
-				banner.ClubOwner.Caption(h.layout.Text(c, "input_error", h.layout.Text(c, "input_club_description"))),
-				h.layout.Markup(c, "clubOwner:club:settings:back", struct {
-					ID string
-				}{
-					ID: club.ID,
-				}),
-			)
-		case !validator.ClubDescription(response.Message.Text, nil):
-			_ = inputCollector.Send(c,
-				banner.ClubOwner.Caption(h.layout.Text(c, "invalid_club_description")),
-				h.layout.Markup(c, "clubOwner:club:settings:back", struct {
-					ID string
-				}{
-					ID: club.ID,
-				}),
-			)
-		case validator.ClubDescription(response.Message.Text, nil):
-			clubDescription = response.Message.Text
-			_ = inputCollector.Clear(c, collector.ClearOptions{IgnoreErrors: true})
-			done = true
-		}
-		if done {
-			break
-		}
-	}
-
-	club.Description = clubDescription
-	_, err = h.clubService.Update(context.Background(), club)
-	if err != nil {
-		h.logger.Errorf("(user: %d) error while update club description: %v", c.Sender().ID, err)
-		return c.Send(
-			banner.ClubOwner.Caption(h.layout.Text(c, "technical_issues", err.Error())),
-			h.layout.Markup(c, "clubOwner:club:settings:back", struct {
-				ID string
-			}{
-				ID: club.ID,
-			}),
-		)
-	}
-
-	return c.Send(
-		banner.ClubOwner.Caption(h.layout.Text(c, "description_changed")),
-		h.layout.Markup(c, "clubOwner:club:settings:back", struct {
-			ID string
-		}{
-			ID: club.ID,
-		}),
-	)
-}
-
 func (h Handler) addOwner(c tele.Context) error {
 	if c.Callback().Data == "" {
 		return errorz.ErrInvalidCallbackData
@@ -843,12 +695,597 @@ func (h Handler) profile(c tele.Context) error {
 	}
 	clubID := c.Callback().Data
 
+	club, err := h.clubService.Get(context.Background(), clubID)
+	if err != nil {
+		h.logger.Errorf("(user: %d) error while get club: %v", c.Sender().ID, err)
+		return c.Send(
+			banner.Menu.Caption(h.layout.Text(c, "technical_issues", err.Error())),
+			h.layout.Markup(c, "mainMenu:back"),
+		)
+	}
+
 	return c.Edit(
 		banner.ClubOwner.Caption(h.layout.Text(c, "profile_text")),
 		h.layout.Markup(c, "clubOwner:club:settings:profile", struct {
+			ID         string
+			ShouldShow bool
+		}{
+			ID:         clubID,
+			ShouldShow: club.ShouldShow,
+		}),
+	)
+}
+
+func (h Handler) setClubName(c tele.Context) error {
+	h.logger.Infof("(user: %d) set club name", c.Sender().ID)
+
+	club, err := h.clubService.Get(context.Background(), c.Callback().Data)
+	if err != nil {
+		h.logger.Errorf("(user: %d) error while get club: %v", c.Sender().ID, err)
+		return c.Send(
+			banner.ClubOwner.Caption(h.layout.Text(c, "technical_issues", err.Error())),
+			h.layout.Markup(c, "mainMenu:back"),
+		)
+	}
+
+	inputCollector := collector.New()
+	_ = c.Edit(
+		banner.ClubOwner.Caption(h.layout.Text(c, "input_club_name")),
+		h.layout.Markup(c, "clubOwner:club:settings:profile:back", struct {
 			ID string
 		}{
-			ID: clubID,
+			ID: club.ID,
+		}),
+	)
+	inputCollector.Collect(c.Message())
+
+	var (
+		clubName string
+		done     bool
+	)
+	for {
+		response, errGet := h.input.Get(context.Background(), c.Sender().ID, 0)
+		if response.Message != nil {
+			inputCollector.Collect(response.Message)
+		}
+		switch {
+		case response.Canceled:
+			_ = inputCollector.Clear(c, collector.ClearOptions{IgnoreErrors: true, ExcludeLast: true})
+			return nil
+		case errGet != nil:
+			h.logger.Errorf("(user: %d) error while input club name: %v", c.Sender().ID, errGet)
+			_ = inputCollector.Send(c,
+				banner.ClubOwner.Caption(h.layout.Text(c, "input_error", h.layout.Text(c, "input_club_name"))),
+				h.layout.Markup(c, "clubOwner:club:settings:profile:back", struct {
+					ID string
+				}{
+					ID: club.ID,
+				}),
+			)
+		case response.Message == nil:
+			_ = inputCollector.Send(c,
+				banner.ClubOwner.Caption(h.layout.Text(c, "input_error", h.layout.Text(c, "input_club_description"))),
+				h.layout.Markup(c, "clubOwner:club:settings:profile:back", struct {
+					ID string
+				}{
+					ID: club.ID,
+				}),
+			)
+		case !validator.ClubName(response.Message.Text, nil):
+			_ = inputCollector.Send(c,
+				banner.ClubOwner.Caption(h.layout.Text(c, "invalid_club_name")),
+				h.layout.Markup(c, "clubOwner:club:settings:profile:back", struct {
+					ID string
+				}{
+					ID: club.ID,
+				}),
+			)
+		case validator.ClubName(response.Message.Text, nil):
+			clubName = response.Message.Text
+			_ = inputCollector.Clear(c, collector.ClearOptions{IgnoreErrors: true})
+			done = true
+		}
+		if done {
+			break
+		}
+	}
+
+	club.Name = clubName
+	_, err = h.clubService.Update(context.Background(), club)
+	if err != nil {
+		if errors.Is(err, gorm.ErrDuplicatedKey) {
+			return c.Send(
+				banner.Menu.Caption(h.layout.Text(c, "club_already_exists")),
+				h.layout.Markup(c, "clubOwner:club:settings:profile:back", struct {
+					ID string
+				}{
+					ID: club.ID,
+				}),
+			)
+		}
+
+		h.logger.Errorf("(user: %d) error while update club name: %v", c.Sender().ID, err)
+		return c.Send(
+			banner.ClubOwner.Caption(h.layout.Text(c, "technical_issues", err.Error())),
+			h.layout.Markup(c, "clubOwner:club:settings:profile:back", struct {
+				ID string
+			}{
+				ID: club.ID,
+			}),
+		)
+	}
+
+	return c.Send(
+		banner.ClubOwner.Caption(h.layout.Text(c, "club_name_set")),
+		h.layout.Markup(c, "clubOwner:club:settings:profile:back", struct {
+			ID string
+		}{
+			ID: club.ID,
+		}),
+	)
+}
+
+func (h Handler) setClubDescription(c tele.Context) error {
+	h.logger.Infof("(user: %d) set club description", c.Sender().ID)
+
+	club, err := h.clubService.Get(context.Background(), c.Callback().Data)
+	if err != nil {
+		h.logger.Errorf("(user: %d) error while get club: %v", c.Sender().ID, err)
+		return c.Send(
+			banner.ClubOwner.Caption(h.layout.Text(c, "technical_issues", err.Error())),
+			h.layout.Markup(c, "mainMenu:back"),
+		)
+	}
+
+	inputCollector := collector.New()
+	_ = c.Edit(
+		banner.ClubOwner.Caption(h.layout.Text(c, "input_club_description")),
+		h.layout.Markup(c, "clubOwner:club:settings:profile:back", struct {
+			ID string
+		}{
+			ID: club.ID,
+		}),
+	)
+	inputCollector.Collect(c.Message())
+
+	var (
+		clubDescription string
+		done            bool
+	)
+	for {
+		response, errGet := h.input.Get(context.Background(), c.Sender().ID, 0)
+		if response.Message != nil {
+			inputCollector.Collect(response.Message)
+		}
+		switch {
+		case response.Canceled:
+			_ = inputCollector.Clear(c, collector.ClearOptions{IgnoreErrors: true, ExcludeLast: true})
+			return nil
+		case errGet != nil:
+			h.logger.Errorf("(user: %d) error while input club description: %v", c.Sender().ID, errGet)
+			_ = inputCollector.Send(c,
+				banner.ClubOwner.Caption(h.layout.Text(c, "input_error", h.layout.Text(c, "input_club_description"))),
+				h.layout.Markup(c, "clubOwner:club:settings:profile:back", struct {
+					ID string
+				}{
+					ID: club.ID,
+				}),
+			)
+		case response.Message == nil:
+			_ = inputCollector.Send(c,
+				banner.ClubOwner.Caption(h.layout.Text(c, "input_error", h.layout.Text(c, "input_club_description"))),
+				h.layout.Markup(c, "clubOwner:club:settings:profile:back", struct {
+					ID string
+				}{
+					ID: club.ID,
+				}),
+			)
+		case !validator.ClubDescription(response.Message.Text, nil):
+			_ = inputCollector.Send(c,
+				banner.ClubOwner.Caption(h.layout.Text(c, "invalid_club_description")),
+				h.layout.Markup(c, "clubOwner:club:settings:profile:back", struct {
+					ID string
+				}{
+					ID: club.ID,
+				}),
+			)
+		case validator.ClubDescription(response.Message.Text, nil):
+			clubDescription = response.Message.Text
+			_ = inputCollector.Clear(c, collector.ClearOptions{IgnoreErrors: true})
+			done = true
+		}
+		if done {
+			break
+		}
+	}
+
+	club.Description = clubDescription
+	_, err = h.clubService.Update(context.Background(), club)
+	if err != nil {
+		h.logger.Errorf("(user: %d) error while update club description: %v", c.Sender().ID, err)
+		return c.Send(
+			banner.ClubOwner.Caption(h.layout.Text(c, "technical_issues", err.Error())),
+			h.layout.Markup(c, "clubOwner:club:settings:profile:back", struct {
+				ID string
+			}{
+				ID: club.ID,
+			}),
+		)
+	}
+
+	return c.Send(
+		banner.ClubOwner.Caption(h.layout.Text(c, "club_description_set")),
+		h.layout.Markup(c, "clubOwner:club:settings:profile:back", struct {
+			ID string
+		}{
+			ID: club.ID,
+		}),
+	)
+}
+
+func (h Handler) setClubLink(c tele.Context) error {
+	h.logger.Infof("(user: %d) set club link", c.Sender().ID)
+
+	club, err := h.clubService.Get(context.Background(), c.Callback().Data)
+	if err != nil {
+		h.logger.Errorf("(user: %d) error while get club: %v", c.Sender().ID, err)
+		return c.Send(
+			banner.ClubOwner.Caption(h.layout.Text(c, "technical_issues", err.Error())),
+			h.layout.Markup(c, "mainMenu:back"),
+		)
+	}
+
+	inputCollector := collector.New()
+	_ = c.Edit(
+		banner.ClubOwner.Caption(h.layout.Text(c, "input_club_link")),
+		h.layout.Markup(c, "clubOwner:club:settings:profile:back", struct {
+			ID string
+		}{
+			ID: club.ID,
+		}),
+	)
+	inputCollector.Collect(c.Message())
+
+	var (
+		clubLink string
+		done     bool
+	)
+	for {
+		response, errGet := h.input.Get(context.Background(), c.Sender().ID, 0)
+		if response.Message != nil {
+			inputCollector.Collect(response.Message)
+		}
+		switch {
+		case response.Canceled:
+			_ = inputCollector.Clear(c, collector.ClearOptions{IgnoreErrors: true, ExcludeLast: true})
+			return nil
+		case errGet != nil:
+			h.logger.Errorf("(user: %d) error while input club link: %v", c.Sender().ID, errGet)
+			_ = inputCollector.Send(c,
+				banner.ClubOwner.Caption(h.layout.Text(c, "input_error", h.layout.Text(c, "input_club_link"))),
+				h.layout.Markup(c, "clubOwner:club:settings:profile:back", struct {
+					ID string
+				}{
+					ID: club.ID,
+				}),
+			)
+		case response.Message == nil:
+			_ = inputCollector.Send(c,
+				banner.ClubOwner.Caption(h.layout.Text(c, "input_error", h.layout.Text(c, "input_club_link"))),
+				h.layout.Markup(c, "clubOwner:club:settings:profile:back", struct {
+					ID string
+				}{
+					ID: club.ID,
+				}),
+			)
+		case !validator.ClubLink(response.Message.Text, nil):
+			_ = inputCollector.Send(c,
+				banner.ClubOwner.Caption(h.layout.Text(c, "invalid_club_link")),
+				h.layout.Markup(c, "clubOwner:club:settings:profile:back", struct {
+					ID string
+				}{
+					ID: club.ID,
+				}),
+			)
+		case validator.ClubLink(response.Message.Text, nil):
+			clubLink = response.Message.Text
+			_ = inputCollector.Clear(c, collector.ClearOptions{IgnoreErrors: true})
+			done = true
+		}
+		if done {
+			break
+		}
+	}
+
+	club.Link = clubLink
+	_, err = h.clubService.Update(context.Background(), club)
+	if err != nil {
+		h.logger.Errorf("(user: %d) error while update club link: %v", c.Sender().ID, err)
+		return c.Send(
+			banner.ClubOwner.Caption(h.layout.Text(c, "technical_issues", err.Error())),
+			h.layout.Markup(c, "clubOwner:club:settings:profile:back", struct {
+				ID string
+			}{
+				ID: club.ID,
+			}),
+		)
+	}
+
+	return c.Send(
+		banner.ClubOwner.Caption(h.layout.Text(c, "club_link_set")),
+		h.layout.Markup(c, "clubOwner:club:settings:profile:back", struct {
+			ID string
+		}{
+			ID: club.ID,
+		}),
+	)
+}
+
+func (h Handler) setClubAvatar(c tele.Context) error {
+	h.logger.Infof("(user: %d) set club avatar", c.Sender().ID)
+
+	club, err := h.clubService.Get(context.Background(), c.Callback().Data)
+	if err != nil {
+		h.logger.Errorf("(user: %d) error while get club: %v", c.Sender().ID, err)
+		return c.Send(
+			banner.ClubOwner.Caption(h.layout.Text(c, "technical_issues", err.Error())),
+			h.layout.Markup(c, "mainMenu:back"),
+		)
+	}
+
+	inputCollector := collector.New()
+	_ = c.Edit(
+		banner.ClubOwner.Caption(h.layout.Text(c, "input_club_avatar")),
+		h.layout.Markup(c, "clubOwner:club:settings:profile:back", struct {
+			ID string
+		}{
+			ID: club.ID,
+		}),
+	)
+	inputCollector.Collect(c.Message())
+
+	var (
+		clubAvatarID string
+		done         bool
+	)
+	for {
+		response, errGet := h.input.Get(context.Background(), c.Sender().ID, 0)
+		if response.Message != nil {
+			inputCollector.Collect(response.Message)
+		}
+		switch {
+		case response.Canceled:
+			_ = inputCollector.Clear(c, collector.ClearOptions{IgnoreErrors: true, ExcludeLast: true})
+			return nil
+		case errGet != nil:
+			h.logger.Errorf("(user: %d) error while input club link: %v", c.Sender().ID, errGet)
+			_ = inputCollector.Send(c,
+				banner.ClubOwner.Caption(h.layout.Text(c, "input_error", h.layout.Text(c, "input_club_avatar"))),
+				h.layout.Markup(c, "clubOwner:club:settings:profile:back", struct {
+					ID string
+				}{
+					ID: club.ID,
+				}),
+			)
+		case response.Message == nil:
+			_ = inputCollector.Send(c,
+				banner.ClubOwner.Caption(h.layout.Text(c, "input_error", h.layout.Text(c, "input_club_avatar"))),
+				h.layout.Markup(c, "clubOwner:club:settings:profile:back", struct {
+					ID string
+				}{
+					ID: club.ID,
+				}),
+			)
+		default:
+			if response.Message.Photo == nil {
+				_ = inputCollector.Send(c,
+					banner.ClubOwner.Caption(h.layout.Text(c, "invalid_club_avatar")),
+					h.layout.Markup(c, "clubOwner:club:settings:profile:back", struct {
+						ID string
+					}{
+						ID: club.ID,
+					}),
+				)
+				continue
+			}
+
+			msg, err := h.bot.Send(&tele.Chat{ID: h.avatarChannelID}, response.Message.Photo)
+			if err != nil {
+				_ = inputCollector.Send(c,
+					banner.ClubOwner.Caption(h.layout.Text(c, "invalid_club_avatar")),
+					h.layout.Markup(c, "clubOwner:club:settings:profile:back", struct {
+						ID string
+					}{
+						ID: club.ID,
+					}),
+				)
+				continue
+			}
+
+			clubAvatarID = msg.Photo.FileID
+			_ = inputCollector.Clear(c, collector.ClearOptions{IgnoreErrors: true})
+			done = true
+		}
+		if done {
+			break
+		}
+	}
+
+	club.AvatarID = clubAvatarID
+	_, err = h.clubService.Update(context.Background(), club)
+	if err != nil {
+		h.logger.Errorf("(user: %d) error while update club avatar: %v", c.Sender().ID, err)
+		return c.Send(
+			banner.ClubOwner.Caption(h.layout.Text(c, "technical_issues", err.Error())),
+			h.layout.Markup(c, "clubOwner:club:settings:profile:back", struct {
+				ID string
+			}{
+				ID: club.ID,
+			}),
+		)
+	}
+
+	return c.Send(
+		banner.ClubOwner.Caption(h.layout.Text(c, "club_avatar_set")),
+		h.layout.Markup(c, "clubOwner:club:settings:profile:back", struct {
+			ID string
+		}{
+			ID: club.ID,
+		}),
+	)
+}
+
+func (h Handler) setClubIntro(c tele.Context) error {
+	h.logger.Infof("(user: %d) set club intro", c.Sender().ID)
+
+	club, err := h.clubService.Get(context.Background(), c.Callback().Data)
+	if err != nil {
+		h.logger.Errorf("(user: %d) error while get club: %v", c.Sender().ID, err)
+		return c.Send(
+			banner.ClubOwner.Caption(h.layout.Text(c, "technical_issues", err.Error())),
+			h.layout.Markup(c, "mainMenu:back"),
+		)
+	}
+
+	inputCollector := collector.New()
+	_ = c.Edit(
+		banner.ClubOwner.Caption(h.layout.Text(c, "input_club_intro")),
+		h.layout.Markup(c, "clubOwner:club:settings:profile:back", struct {
+			ID string
+		}{
+			ID: club.ID,
+		}),
+	)
+	inputCollector.Collect(c.Message())
+
+	var (
+		clubIntroID string
+		done        bool
+	)
+	for {
+		response, errGet := h.input.Get(context.Background(), c.Sender().ID, 0)
+		if response.Message != nil {
+			inputCollector.Collect(response.Message)
+		}
+		switch {
+		case response.Canceled:
+			_ = inputCollector.Clear(c, collector.ClearOptions{IgnoreErrors: true, ExcludeLast: true})
+			return nil
+		case errGet != nil:
+			h.logger.Errorf("(user: %d) error while input club intro: %v", c.Sender().ID, errGet)
+			_ = inputCollector.Send(c,
+				banner.ClubOwner.Caption(h.layout.Text(c, "input_error", h.layout.Text(c, "input_club_intro"))),
+				h.layout.Markup(c, "clubOwner:club:settings:profile:back", struct {
+					ID string
+				}{
+					ID: club.ID,
+				}),
+			)
+		case response.Message == nil:
+			_ = inputCollector.Send(c,
+				banner.ClubOwner.Caption(h.layout.Text(c, "input_error", h.layout.Text(c, "input_club_intro"))),
+				h.layout.Markup(c, "clubOwner:club:settings:profile:back", struct {
+					ID string
+				}{
+					ID: club.ID,
+				}),
+			)
+		default:
+			if response.Message.VideoNote == nil {
+				_ = inputCollector.Send(c,
+					banner.ClubOwner.Caption(h.layout.Text(c, "invalid_club_intro")),
+					h.layout.Markup(c, "clubOwner:club:settings:profile:back", struct {
+						ID string
+					}{
+						ID: club.ID,
+					}),
+				)
+				continue
+			}
+
+			msg, err := h.bot.Send(&tele.Chat{ID: h.introChannelID}, response.Message.VideoNote)
+
+			if err != nil {
+				_ = inputCollector.Send(c,
+					banner.ClubOwner.Caption(h.layout.Text(c, "invalid_club_intro")),
+					h.layout.Markup(c, "clubOwner:club:settings:profile:back", struct {
+						ID string
+					}{
+						ID: club.ID,
+					}),
+				)
+				continue
+			}
+
+			clubIntroID = msg.VideoNote.FileID
+			_ = inputCollector.Clear(c, collector.ClearOptions{IgnoreErrors: true})
+			done = true
+		}
+		if done {
+			break
+		}
+	}
+
+	club.IntroID = clubIntroID
+	_, err = h.clubService.Update(context.Background(), club)
+	if err != nil {
+		h.logger.Errorf("(user: %d) error while update club intro: %v", c.Sender().ID, err)
+		return c.Send(
+			banner.ClubOwner.Caption(h.layout.Text(c, "technical_issues", err.Error())),
+			h.layout.Markup(c, "clubOwner:club:settings:profile:back", struct {
+				ID string
+			}{
+				ID: club.ID,
+			}),
+		)
+	}
+
+	return c.Send(
+		banner.ClubOwner.Caption(h.layout.Text(c, "club_intro_set")),
+		h.layout.Markup(c, "clubOwner:club:settings:profile:back", struct {
+			ID string
+		}{
+			ID: club.ID,
+		}),
+	)
+}
+
+func (h Handler) shouldShow(c tele.Context) error {
+	if c.Callback().Data == "" {
+		return errorz.ErrInvalidCallbackData
+	}
+	clubID := c.Callback().Data
+
+	club, err := h.clubService.Get(context.Background(), clubID)
+	if err != nil {
+		h.logger.Errorf("(user: %d) error while get club: %v", c.Sender().ID, err)
+		return c.Edit(
+			banner.Menu.Caption(h.layout.Text(c, "technical_issues", err.Error())),
+			h.layout.Markup(c, "mainMenu:back"),
+		)
+	}
+
+	club.ShouldShow = !club.ShouldShow
+	updatedClub, err := h.clubService.Update(context.Background(), club)
+	if err != nil {
+		return c.Edit(
+			banner.ClubOwner.Caption(h.layout.Text(c, "technical_issues", err.Error())),
+			h.layout.Markup(c, "clubOwner:club:settings:profile:back", struct {
+				ID string
+			}{
+				ID: club.ID,
+			}),
+		)
+	}
+
+	return c.Edit(
+		banner.ClubOwner.Caption(h.layout.Text(c, "profile_text")),
+		h.layout.Markup(c, "clubOwner:club:settings:profile", struct {
+			ID         string
+			ShouldShow bool
+		}{
+			ID:         updatedClub.ID,
+			ShouldShow: updatedClub.ShouldShow,
 		}),
 	)
 }
@@ -3338,11 +3775,16 @@ func (h Handler) ClubOwnerSetup(group *tele.Group, middle *middlewares.Handler) 
 
 	group.Handle(h.layout.Callback("clubOwner:club:settings"), h.clubSettings)
 	group.Handle(h.layout.Callback("clubOwner:club:settings:back"), h.clubSettings)
-	//group.Handle(h.layout.Callback("clubOwner:club:settings:edit_name"), h.editName)
-	//group.Handle(h.layout.Callback("clubOwner:club:settings:edit_description"), h.editDescription)
 	group.Handle(h.layout.Callback("clubOwner:club:settings:add_owner"), h.addOwner)
 	group.Handle(h.layout.Callback("clubOwner:club:settings:warnings"), h.warnings)
 	group.Handle(h.layout.Callback("clubOwner:club:settings:profile"), h.profile)
+	group.Handle(h.layout.Callback("clubOwner:club:settings:profile:set_name"), h.setClubName)
+	group.Handle(h.layout.Callback("clubOwner:club:settings:profile:set_description"), h.setClubDescription)
+	group.Handle(h.layout.Callback("clubOwner:club:settings:profile:set_link"), h.setClubLink)
+	group.Handle(h.layout.Callback("clubOwner:club:settings:profile:set_avatar"), h.setClubAvatar)
+	group.Handle(h.layout.Callback("clubOwner:club:settings:profile:set_intro"), h.setClubIntro)
+	group.Handle(h.layout.Callback("clubOwner:club:settings:profile:should_show"), h.shouldShow)
+	group.Handle(h.layout.Callback("clubOwner:club:settings:profile:back"), h.profile)
 	group.Handle(h.layout.Callback("clubOwner:club:settings:warnings:user"), h.warnings)
 }
 

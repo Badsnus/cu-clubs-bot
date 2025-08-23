@@ -16,6 +16,8 @@ back: ← Назад
 banned: ❌ Вы забанены в этом боте
 correct: ✅ Верно
 incorrect: ❌ Неверно
+show_in_menu: ✅ Показывать в меню
+not_show_in_menu: ❌ Не показывать в меню
 loading: ⏳
 unknown_command: <i>❓ Неизвестная команда, пропишите “/start”</i>
 confirm: ✅ Подтвердить
@@ -127,6 +129,15 @@ event_qr_text: |-
   <i>QR-код могут отсканировать даже не зарегистрированные на мероприятие пользователи</i>
 
 # user
+
+cu_clubs_list: Список клубов ЦУ
+cu_club: |-
+  Клуб: <b>{{html .Club.Name}}</b>
+  <b>Описание:</b>
+  <blockquote>{{if .Club.Description}}{{html .Club.Description}}{{else}}<i>Не указано</i>{{end}}</blockquote>
+
+  <b>Ссылка на чат/канал клуба:</b>
+  {{if .Club.Link}}<code>{{html .Club.Link}}</code>{{else}}Не указана{{end}}
 events_list: |-
   <b>Список мероприятий</b>
 event_text: |-
@@ -194,6 +205,9 @@ club_owner_club_menu_text: |-
   {{if .Owners}}{{range .Owners}}- <b>{{html .FIO}}</b> (@{{.Username}}){{"\n"}}{{end}}{{else}}<i>- Отсутствуют</i>{{"\n"}}{{end}}
   <b>Описание:</b>
   <blockquote>{{if .Club.Description}}{{html .Club.Description}}{{else}}<i>Не указано</i>{{end}}</blockquote>
+  
+  <b>Ссылка на чат/канал клуба:</b>
+  {{if .Club.Link}}<code>{{html .Club.Link}}</code>{{else}}Не указано{{end}}
 
 club_settings: Настройки
 club_settings_text: |-
@@ -203,8 +217,9 @@ club_settings_text: |-
   {{if .Owners}}{{range .Owners}}- <b>{{html .FIO}}</b> (id: <code>{{.UserID}}</code>){{"\n"}}{{end}}{{else}}<i>- Отсутствуют</i>{{"\n"}}{{end}}
   <b>Описание:</b>
   <blockquote>{{if .Club.Description}}{{html .Club.Description}}{{else}}<i>Не указано</i>{{end}}</blockquote>
-
-  <i>Попробуйте ещё раз</i>
+  
+  <b>Ссылка на чат/канал клуба:</b>
+  {{if .Club.Link}}<code>{{html .Club.Link}}</code>{{else}}Не указано{{end}}
 
 warnings: Уведомления
 warnings_text: |-

@@ -28,7 +28,7 @@ func New(b *bot.Bot) *Handler {
 	clubStorage := postgres.NewClubStorage(b.DB)
 
 	return &Handler{
-		clubService: service.NewClubService(clubStorage),
+		clubService: service.NewClubService(b.Bot, clubStorage),
 
 		logger: b.Logger,
 		layout: b.Layout,
