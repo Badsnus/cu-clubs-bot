@@ -198,15 +198,15 @@ func (s *EventParticipantService) checkAndSend(ctx context.Context) {
 		return
 	}
 
-	var participantsWithoutStudents []entity.User
-	for _, participant := range participants {
-		if !(participant.Role == entity.Student) {
-			participantsWithoutStudents = append(participantsWithoutStudents, participant)
-		}
-	}
-	if len(participantsWithoutStudents) == 0 {
-		return
-	}
+	//var participantsWithoutStudents []entity.User
+	//for _, participant := range participants {
+	//	if !(participant.Role == entity.Student) {
+	//		participantsWithoutStudents = append(participantsWithoutStudents, participant)
+	//	}
+	//}
+	//if len(participantsWithoutStudents) == 0 {
+	//	return
+	//}
 
 	clubs, err := s.clubStorage.GetManyByIDs(context.Background(), clubsIDs)
 	if err != nil {
@@ -220,7 +220,7 @@ func (s *EventParticipantService) checkAndSend(ctx context.Context) {
 	clubsNameStr := strings.Join(clubsName, ", ")
 
 	var buf *bytes.Buffer
-	buf, err = participantsToXLSX(participantsWithoutStudents)
+	buf, err = participantsToXLSX(participants)
 	if err != nil {
 		s.logger.Errorf("failed to form xlsx with participants %s: %v", eventIDs, err)
 		return
