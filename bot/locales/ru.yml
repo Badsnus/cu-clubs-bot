@@ -131,8 +131,9 @@ event_qr_text: |-
 # user
 
 cu_clubs_list: Список клубов ЦУ
-cu_club: |-
+cu_club_text: |-
   Клуб: <b>{{html .Club.Name}}</b>
+  
   <b>Описание:</b>
   <blockquote>{{if .Club.Description}}{{html .Club.Description}}{{else}}<i>Не указано</i>{{end}}</blockquote>
 

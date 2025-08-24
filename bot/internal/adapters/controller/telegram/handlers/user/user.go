@@ -64,6 +64,10 @@ type eventService interface {
 
 type clubService interface {
 	Get(ctx context.Context, id string) (*entity.Club, error)
+	CountByShouldShow(ctx context.Context, shouldShow bool) (int64, error)
+	GetByShouldShowWithPagination(ctx context.Context, shouldShow bool, limit, offset int, order string) ([]entity.Club, error)
+	GetAvatar(ctx context.Context, id string) (*tele.File, error)
+	GetIntro(ctx context.Context, id string) (*tele.File, error)
 }
 
 type eventParticipantService interface {
@@ -133,7 +137,7 @@ func New(b *bot.Bot) *Handler {
 		userService:             userSrvc,
 		eventService:            service.NewEventService(eventStorage),
 		eventParticipantService: eventPartService,
-		clubService:             service.NewClubService(clubStorage),
+		clubService:             service.NewClubService(b.Bot, clubStorage),
 		qrService:               qrSrvc,
 		notificationService: service.NewNotifyService(
 			b.Bot,
@@ -156,6 +160,230 @@ func New(b *bot.Bot) *Handler {
 
 func (h Handler) Hide(c tele.Context) error {
 	return c.Delete()
+}
+
+func (h Handler) cuClubs(c tele.Context) error {
+	const clubsOnPage = 5
+	h.logger.Infof("(user: %d) get clubs list", c.Sender().ID)
+
+	var (
+		p          int
+		prevPage   int
+		nextPage   int
+		err        error
+		clubsCount int64
+		clubs      []entity.Club
+		rows       []tele.Row
+		menuRow    tele.Row
+	)
+	if c.Callback().Unique != "mainMenu_cuClubs" {
+		p, err = strconv.Atoi(c.Callback().Data)
+		if err != nil {
+			return errorz.ErrInvalidCallbackData
+		}
+	}
+
+	clubsCount, err = h.clubService.CountByShouldShow(context.Background(), true)
+	if err != nil {
+		h.logger.Errorf("(user: %d) error while getting clubs count: %v", c.Sender().ID, err)
+		return c.Edit(
+			banner.Clubs.Caption(h.layout.Text(c, "technical_issues", err.Error())),
+			h.layout.Markup(c, "mainMenu:back"),
+		)
+	}
+
+	clubs, err = h.clubService.GetByShouldShowWithPagination(
+		context.Background(),
+		true,
+		clubsOnPage,
+		p*clubsOnPage,
+		"created_at ASC",
+	)
+
+	if err != nil {
+		h.logger.Errorf(
+			"(user: %d) error while get clubs (offset=%d, limit=%d, order=%s, should_show=%t): %v",
+			c.Sender().ID,
+			p*clubsOnPage,
+			clubsOnPage,
+			"created_at ASC",
+			true,
+			err,
+		)
+		return c.Edit(
+			banner.Clubs.Caption(h.layout.Text(c, "technical_issues", err.Error())),
+			h.layout.Markup(c, "mainMenu:back"),
+		)
+	}
+	h.logger.Infof("(user: %d) GetWithPagination returned %d clubs for page %d (limit %d, offset %d)", c.Sender().ID, len(clubs), p, clubsOnPage, p*clubsOnPage)
+	h.logger.Debugf("clubs: %+v", clubs)
+
+	markup := c.Bot().NewMarkup()
+	for _, club := range clubs {
+		h.logger.Debugf("Club: %s (%s)", club.Name, club.ID)
+		rows = append(rows, markup.Row(*h.layout.Button(c, "cuClubs:club", struct {
+			ID   string
+			Name string
+			Page int
+		}{
+			ID:   club.ID,
+			Name: club.Name,
+			Page: p,
+		})))
+	}
+	h.logger.Debugf("clubs: %+v", rows)
+
+	pagesCount := (int(clubsCount) - 1) / clubsOnPage
+	if p == 0 {
+		prevPage = pagesCount
+	} else {
+		prevPage = p - 1
+	}
+
+	if p >= pagesCount {
+		nextPage = 0
+	} else {
+		nextPage = p + 1
+	}
+
+	menuRow = append(menuRow,
+		*h.layout.Button(c, "cuClubs:prev_page", struct {
+			Page int
+		}{
+			Page: prevPage,
+		}),
+		*h.layout.Button(c, "core:page_counter", struct {
+			Page       int
+			PagesCount int
+		}{
+			Page:       p + 1,
+			PagesCount: pagesCount + 1,
+		}),
+		*h.layout.Button(c, "cuClubs:next_page", struct {
+			Page int
+		}{
+			Page: nextPage,
+		}),
+	)
+
+	rows = append(
+		rows,
+		menuRow,
+		markup.Row(*h.layout.Button(c, "mainMenu:back")),
+	)
+
+	markup.Inline(rows...)
+
+	h.logger.Infof(
+		"(user: %d) user clubs list (pages_count=%d, page=%d, clubs_count=%d, next_page=%d, prev_page=%d)",
+		c.Sender().ID,
+		pagesCount,
+		p,
+		clubsCount,
+		nextPage,
+		prevPage,
+	)
+
+	_ = c.Edit(
+		banner.Events.Caption(h.layout.Text(c, "cu_clubs_list")),
+		markup,
+	)
+	return nil
+}
+
+func (h Handler) club(c tele.Context) error {
+	callbackData := strings.Split(c.Callback().Data, " ")
+	if len(callbackData) != 2 {
+		return errorz.ErrInvalidCallbackData
+	}
+	clubID := callbackData[0]
+	pageStr := callbackData[1]
+	page, err := strconv.Atoi(pageStr)
+	if err != nil {
+		return errorz.ErrInvalidCallbackData
+	}
+
+	h.logger.Infof("(user: %d) edit club menu (club_id=%s)", c.Sender().ID, clubID)
+
+	club, err := h.clubService.Get(context.Background(), clubID)
+	if err != nil {
+		h.logger.Errorf("(user: %d) error while get club: %v", c.Sender().ID, err)
+		return c.Send(
+			banner.ClubOwner.Caption(h.layout.Text(c, "technical_issues", err.Error())),
+			h.layout.Markup(c, "cuClubs:back", struct {
+				Page int
+			}{
+				Page: page,
+			}),
+		)
+	}
+
+	menuMarkup := h.layout.Markup(c, "cuClubs:club:menu", struct {
+		Page int
+	}{
+		Page: page,
+	})
+
+	clubAvatar, err := h.clubService.GetAvatar(context.Background(), club.ID)
+	if err != nil {
+		h.logger.Errorf("(user: %d) error while get clubs: %v", c.Sender().ID, err)
+		return c.Send(
+			banner.ClubOwner.Caption(h.layout.Text(c, "clubs", err.Error())),
+			h.layout.Markup(c, "cuClubs:back"),
+		)
+	}
+
+	clubIntro, err := h.clubService.GetIntro(context.Background(), club.ID)
+	if err != nil {
+		h.logger.Errorf("(user: %d) error while get clubs: %v", c.Sender().ID, err)
+		return c.Send(
+			banner.ClubOwner.Caption(h.layout.Text(c, "clubs", err.Error())),
+			h.layout.Markup(c, "cuClubs:back"),
+		)
+	}
+
+	_ = c.Delete()
+
+	if clubIntro != nil {
+		videoNote := &tele.VideoNote{
+			File: *clubIntro,
+		}
+
+		_ = c.Send(videoNote, h.layout.Markup(c, "core:hide"))
+	}
+
+	if clubAvatar != nil {
+		caption := &tele.Photo{
+			File: tele.File{
+				FileID:     clubAvatar.FileID,
+				UniqueID:   clubAvatar.UniqueID,
+				FileSize:   clubAvatar.FileSize,
+				FilePath:   clubAvatar.FilePath,
+				FileLocal:  clubAvatar.FileLocal,
+				FileURL:    clubAvatar.FileURL,
+				FileReader: clubAvatar.FileReader,
+			},
+			Caption: h.layout.Text(c, "cu_club_text", struct {
+				Club entity.Club
+			}{
+				Club: *club,
+			}),
+		}
+
+		return c.Send(
+			caption,
+			menuMarkup,
+		)
+	}
+
+	return c.Send(
+		banner.ClubOwner.Caption(h.layout.Text(c, "cu_club_text", struct {
+			Club entity.Club
+		}{
+			Club: *club,
+		})),
+		menuMarkup,
+	)
 }
 
 func (h Handler) personalAccount(c tele.Context) error {
@@ -1583,7 +1811,11 @@ func (h Handler) resendChangeRoleEmailConfirmationCode(c tele.Context) error {
 }
 
 func (h Handler) UserSetup(group *tele.Group) {
-	// group.Handle(h.layout.Callback("mainMenu:cuClubs"), h.cuClubs)
+	group.Handle(h.layout.Callback("mainMenu:cuClubs"), h.cuClubs)
+	group.Handle(h.layout.Callback("cuClubs:prev_page"), h.cuClubs)
+	group.Handle(h.layout.Callback("cuClubs:next_page"), h.cuClubs)
+	group.Handle(h.layout.Callback("cuClubs:back"), h.cuClubs)
+	group.Handle(h.layout.Callback("cuClubs:club"), h.club)
 
 	group.Handle(h.layout.Callback("mainMenu:events"), h.eventsList)
 	group.Handle(h.layout.Callback("user:events:prev_page"), h.eventsList)

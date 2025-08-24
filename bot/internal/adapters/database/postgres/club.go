@@ -73,3 +73,15 @@ func (s *ClubStorage) GetWithPagination(ctx context.Context, limit, offset int, 
 	err := s.db.WithContext(ctx).Order(order).Limit(limit).Offset(offset).Find(&clubs).Error
 	return clubs, err
 }
+
+func (s *ClubStorage) CountByShouldShow(ctx context.Context, shouldShow bool) (int64, error) {
+	var count int64
+	err := s.db.WithContext(ctx).Model(&entity.Club{}).Where("should_show = ?", shouldShow).Count(&count).Error
+	return count, err
+}
+
+func (s *ClubStorage) GetByShouldShowWithPagination(ctx context.Context, shouldShow bool, limit, offset int, order string) ([]entity.Club, error) {
+	var clubs []entity.Club
+	err := s.db.WithContext(ctx).Where("should_show = ?", shouldShow).Order(order).Limit(limit).Offset(offset).Find(&clubs).Error
+	return clubs, err
+}

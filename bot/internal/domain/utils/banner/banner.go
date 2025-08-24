@@ -11,6 +11,7 @@ var (
 	Auth            Banner
 	Menu            Banner
 	PersonalAccount Banner
+	Clubs           Banner
 	ClubOwner       Banner
 	Events          Banner
 

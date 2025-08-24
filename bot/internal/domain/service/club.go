@@ -15,6 +15,8 @@ type ClubStorage interface {
 	Update(ctx context.Context, club *entity.Club) (*entity.Club, error)
 	Delete(ctx context.Context, id string) error
 	Count(ctx context.Context) (int64, error)
+	CountByShouldShow(ctx context.Context, shouldShow bool) (int64, error)
+	GetByShouldShowWithPagination(ctx context.Context, shouldShow bool, limit, offset int, order string) ([]entity.Club, error)
 }
 
 type ClubService struct {
@@ -43,6 +45,14 @@ func (s *ClubService) Get(ctx context.Context, id string) (*entity.Club, error) 
 
 func (s *ClubService) GetByOwnerID(ctx context.Context, id int64) ([]entity.Club, error) {
 	return s.storage.GetByOwnerID(ctx, id)
+}
+
+func (s *ClubService) CountByShouldShow(ctx context.Context, shouldShow bool) (int64, error) {
+	return s.storage.CountByShouldShow(ctx, shouldShow)
+}
+
+func (s *ClubService) GetByShouldShowWithPagination(ctx context.Context, shouldShow bool, limit, offset int, order string) ([]entity.Club, error) {
+	return s.storage.GetByShouldShowWithPagination(ctx, shouldShow, limit, offset, order)
 }
 
 func (s *ClubService) Update(ctx context.Context, club *entity.Club) (*entity.Club, error) {

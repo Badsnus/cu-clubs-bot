@@ -513,6 +513,26 @@ buttons:
     unique: mainMenu_cuClubs
     text: '{{ text `cu_clubs` }}'
 
+  cuClubs:club:
+    unique: cuClubs_club
+    callback_data: '{{.ID}} {{.Page}}'
+    text: '{{ .Name }}'
+
+  cuClubs:prev_page:
+    unique: cuClubs_prevPage
+    callback_data: '{{.Page}}'
+    text: '{{ text `prev` }}'
+
+  cuClubs:next_page:
+    unique: cuClubs_nextPage
+    callback_data: '{{.Page}}'
+    text: '{{ text `next` }}'
+
+  cuClubs:back:
+    unique: cuClubs_back
+    callback_data: '{{.Page}}'
+    text: '{{ text `back` }}'
+
   mainMenu:personalAccount:
     unique: mainMenu_personalAccount
     text: '{{ text `personal_account` }}'
@@ -549,6 +569,12 @@ markups:
   mailing:
     - [ mailing:switch ]
     - [ core:hide ]
+
+  cuClubs:club:menu:
+    - [ cuClubs:back ]
+
+  cuClubs:back:
+    - [ cuClubs:back ]
 
   personalAccount:menu:
     - [ personalAccount:my_events ]
