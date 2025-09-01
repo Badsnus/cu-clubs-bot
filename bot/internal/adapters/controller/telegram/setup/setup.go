@@ -65,6 +65,7 @@ func Setup(b *bot.Bot) {
 	b.Handle(tele.OnText, b.Input.MessageHandler())
 	b.Handle(tele.OnMedia, b.Input.MessageHandler())
 	b.Handle(tele.OnCallback, b.Input.CallbackHandler())
+	b.Handle(tele.OnVideoNote, b.Input.MessageHandler())
 	b.Use(middle.ResetInputOnBack)
 	b.Handle(b.Layout.Callback("core:hide"), userHandler.Hide)
 	b.Handle(b.Layout.Callback("core:cancel"), userHandler.Hide)

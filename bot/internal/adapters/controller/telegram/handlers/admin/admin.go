@@ -68,7 +68,7 @@ func New(b *bot.Bot) *Handler {
 		bot:              b,
 		input:            b.Input,
 		adminUserService: service.NewUserService(userStorage, nil, nil, ""),
-		clubService:      service.NewClubService(clubStorage),
+		clubService:      service.NewClubService(b.Bot, clubStorage),
 		clubOwnerService: service.NewClubOwnerService(clubOwnerStorage, userStorage),
 	}
 }

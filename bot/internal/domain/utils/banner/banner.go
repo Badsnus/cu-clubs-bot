@@ -11,6 +11,7 @@ var (
 	Auth            Banner
 	Menu            Banner
 	PersonalAccount Banner
+	Clubs           Banner
 	ClubOwner       Banner
 	Events          Banner
 
@@ -38,6 +39,12 @@ func Load(b *tele.Bot) error {
 		return err
 	}
 	PersonalAccount = Banner(personalAccount)
+
+	clubs, err := b.FileByID(viper.GetString("bot.banner.clubs"))
+	if err != nil {
+		return err
+	}
+	Clubs = Banner(clubs)
 
 	clubOwner, err := b.FileByID(viper.GetString("bot.banner.club-owner"))
 	if err != nil {

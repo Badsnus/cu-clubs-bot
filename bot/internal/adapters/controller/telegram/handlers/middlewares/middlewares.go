@@ -47,7 +47,7 @@ func New(b *bot.Bot) *Handler {
 		layout:      b.Layout,
 		logger:      b.Logger,
 		userService: userServiceLocal,
-		clubService: service.NewClubService(clubStorage),
+		clubService: service.NewClubService(b.Bot, clubStorage),
 		input:       b.Input,
 	}
 }

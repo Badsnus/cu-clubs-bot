@@ -216,20 +216,50 @@ buttons:
     callback_data: '{{.ID}}'
     text: '{{ text `back` }}'
 
-  clubOwner:club:settings:edit_name:
-    unique: clubOwner_club_editName
-    callback_data: '{{.ID}}'
-    text: '{{ text `edit_name` }}'
-
-  clubOwner:club:settings:edit_description:
-    unique: clubOwner_club_editDesc
-    callback_data: '{{.ID}}'
-    text: '{{ text `edit_description` }}'
-
   clubOwner:club:settings:add_owner:
     unique: clubOwner_club_addOwner
     callback_data: '{{.ID}}'
     text: '{{ text `add_club_owner` }}'
+
+  clubOwner:club:settings:profile:
+    unique: clubOwner_club
+    callback_data: '{{.ID}}'
+    text: '{{ text `profile` }}'
+
+  clubOwner:club:settings:profile:back:
+    unique: clubOwner_cl_prof_back
+    callback_data: '{{.ID}}'
+    text: '{{ text `back` }}'
+
+  clubOwner:club:settings:profile:set_name:
+    unique: clubOwner_club_setName
+    callback_data: '{{.ID}}'
+    text: '{{ text `set_club_name` }}'
+
+  clubOwner:club:settings:profile:set_description:
+    unique: clubOwner_club_setDesc
+    callback_data: '{{.ID}}'
+    text: '{{ text `set_club_description` }}'
+
+  clubOwner:club:settings:profile:set_link:
+    unique: clubOwner_club_setLink
+    callback_data: '{{.ID}}'
+    text: '{{ text `set_club_link` }}'
+
+  clubOwner:club:settings:profile:set_avatar:
+    unique: clubOwner_club_setAvatar
+    callback_data: '{{.ID}}'
+    text: '{{ text `set_club_avatar` }}'
+
+  clubOwner:club:settings:profile:set_intro:
+    unique: clubOwner_club_setIntro
+    callback_data: '{{.ID}}'
+    text: '{{ text `set_club_intro` }}'
+
+  clubOwner:club:settings:profile:should_show:
+    unique: clubOwner_club_shouldShow
+    callback_data: '{{.ID}}'
+    text: '{{ if .ShouldShow }}{{ text `show_in_menu` }}{{ else }}{{ text `not_show_in_menu` }}{{ end }}'
 
   clubOwner:club:settings:warnings:
     unique: clubOwner_club_warnings
@@ -481,12 +511,45 @@ buttons:
   # cu clubs tour functionality
   mainMenu:cuClubs:
     unique: mainMenu_cuClubs
-    callback_data: cuClubs:clubs
     text: '{{ text `cu_clubs` }}'
+
+  cuClubs:club:intro:
+    unique: cuClubs_club_intro
+    callback_data: '{{.ID}} {{.Page}}'
+    text: '{{ .Name }}'
+
+  cuClubs:club:intro:back:
+    unique: club_intro_back
+    callback_data: '{{.ID}} {{.Page}}'
+    text: '{{ text `back` }}'
+
+  cuClubs:club:about:
+    unique: cuClubs_club_about
+    callback_data: '{{.ID}} {{.Page}}'
+    text: '{{ text `club_about` }}'
+
+  cuClubs:club:about:back:
+    unique: cuClubs_club_about_back
+    callback_data: '{{.ID}} {{.Page}}'
+    text: '{{ text `back` }}'
+
+  cuClubs:prev_page:
+    unique: cuClubs_prevPage
+    callback_data: '{{.Page}}'
+    text: '{{ text `prev` }}'
+
+  cuClubs:next_page:
+    unique: cuClubs_nextPage
+    callback_data: '{{.Page}}'
+    text: '{{ text `next` }}'
+
+  cuClubs:back:
+    unique: cuClubs_back
+    callback_data: '{{.Page}}'
+    text: '{{ text `back` }}'
 
   mainMenu:personalAccount:
     unique: mainMenu_personalAccount
-    callback_data: mainMenu_personalAccount
     text: '{{ text `personal_account` }}'
 
 
@@ -512,7 +575,7 @@ markups:
 #    - [ mainMenu:events, mainMenu:my_events ]
 #    - [ mainMenu:qr ]
   mainMenu:menu:
-    - [ mainMenu:events ]
+    - [ mainMenu:cuClubs, mainMenu:events ]
     - [ mainMenu:personalAccount ]
     - [ mainMenu:qr ]
   mainMenu:back:
@@ -521,6 +584,16 @@ markups:
   mailing:
     - [ mailing:switch ]
     - [ core:hide ]
+
+  cuClubs:club:intro:menu:
+    - [ cuClubs:club:about ]
+    - [ cuClubs:back ]
+
+  cuClubs:club:intro:back:
+    - [ cuClubs:club:intro:back ]
+
+  cuClubs:back:
+    - [ cuClubs:back ]
 
   personalAccount:menu:
     - [ personalAccount:my_events ]
@@ -560,15 +633,23 @@ markups:
     - [ clubOwner:club:mailing ]
     - [ clubOwner:club:settings ]
   clubOwner:club:settings:
-    - [ clubOwner:club:settings:edit_name ]
-    - [ clubOwner:club:settings:edit_description ]
     - [ clubOwner:club:settings:add_owner ]
     - [ clubOwner:club:settings:warnings ]
+    - [ clubOwner:club:settings:profile ]
     - [ clubOwner:club:back ]
   clubOwner:club:settings:back:
     - [ clubOwner:club:settings:back ]
   clubOwner:club:settings:warnings:
     - [ clubOwner:club:settings:back ]
+  clubOwner:club:settings:profile:
+    - [ clubOwner:club:settings:profile:set_name, clubOwner:club:settings:profile:set_description ]
+    - [ clubOwner:club:settings:profile:set_link ]
+    - [ clubOwner:club:settings:profile:set_avatar, clubOwner:club:settings:profile:set_intro ]
+    - [ clubOwner:club:settings:profile:should_show ]
+    - [ clubOwner:club:settings:back ]
+  clubOwner:club:settings:profile:back:
+    - [ clubOwner:club:settings:profile:back ]
+
   clubOwner:club:back:
     - [ clubOwner:club:back ]
   clubOwner:createClub:confirm:
