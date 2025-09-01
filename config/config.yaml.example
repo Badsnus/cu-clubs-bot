@@ -33,6 +33,7 @@ bot:
     auth: "AgACAgIAAxkDAAMjZ54WGso7E9FRgvmxvzD9dAuLF98AAvDlMRvelPFIqs-v4Q8TUswBAAMCAAN3AAM2BA"
     menu: "AgACAgIAAxkDAAMkZ54WGt_8BtEqxqgplk5LMJ6v4s4AAvHlMRvelPFImOHfDJlYSvUBAAMCAAN3AAM2BA"
     personal-account: "AgACAgIAAxkDAAMkZ54WGt_8BtEqxqgplk5LMJ6v4s4AAvHlMRvelPFImOHfDJlYSvUBAAMCAAN3AAM2BA"
+    clubs: "AgACAgIAAxkDAAMkZ54WGt_8BtEqxqgplk5LMJ6v4s4AAvHlMRvelPFImOHfDJlYSvUBAAMCAAN3AAM2BA"
     club-owner: "AgACAgIAAxkDAAMiZ54WGYEjQ3vnJB3qz8_J3cHjwOoAAu_lMRvelPFI-WZmQhkJiYkBAAMCAAN3AAM2BA"
     events: "AgACAgIAAxkDAAMhZ54WGV8S15EsttBZSXn4fJ0kcZwAAu7lMRvelPFIrnmCmuVplD0BAAMCAAN3AAM2BA"
   auth:
@@ -43,6 +44,10 @@ bot:
   qr:
     channel-id: -400000000
   pass:
+    channel-id: -400000000
+  avatar:
+    channel-id: -400000000
+  intro:
     channel-id: -400000000
   mailing:
     channel-id: -400000000
