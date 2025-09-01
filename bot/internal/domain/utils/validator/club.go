@@ -10,7 +10,7 @@ func ClubName(name string, _ map[string]interface{}) bool {
 }
 
 func ClubDescription(description string, _ map[string]interface{}) bool {
-	return utf8.RuneCountInString(description) <= 400
+	return utf8.RuneCountInString(description) <= 500
 }
 
 func ClubLink(link string, _ map[string]interface{}) bool {

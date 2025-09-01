@@ -8,6 +8,7 @@ import (
 	"github.com/Badsnus/cu-clubs-bot/bot/cmd/bot"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/controller/telegram/handlers/menu"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/database/postgres"
+	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/database/redis/callbacks"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/database/redis/codes"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/database/redis/emails"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/database/redis/events"
@@ -95,12 +96,13 @@ type Handler struct {
 
 	menuHandler *menu.Handler
 
-	codesStorage  *codes.Storage
-	emailsStorage *emails.Storage
-	eventsStorage *events.Storage
-	input         *intele.InputManager
-	layout        *layout.Layout
-	logger        *types.Logger
+	codesStorage     *codes.Storage
+	emailsStorage    *emails.Storage
+	eventsStorage    *events.Storage
+	callbacksStorage *callbacks.Storage
+	input            *intele.InputManager
+	layout           *layout.Layout
+	logger           *types.Logger
 }
 
 func New(b *bot.Bot) *Handler {
@@ -148,13 +150,14 @@ func New(b *bot.Bot) *Handler {
 			nil,
 			nil,
 		),
-		menuHandler:   menu.New(b),
-		codesStorage:  b.Redis.Codes,
-		emailsStorage: b.Redis.Emails,
-		eventsStorage: b.Redis.Events,
-		layout:        b.Layout,
-		input:         b.Input,
-		logger:        b.Logger,
+		menuHandler:      menu.New(b),
+		codesStorage:     b.Redis.Codes,
+		emailsStorage:    b.Redis.Emails,
+		eventsStorage:    b.Redis.Events,
+		callbacksStorage: b.Redis.Callbacks,
+		layout:           b.Layout,
+		input:            b.Input,
+		logger:           b.Logger,
 	}
 }
 
@@ -163,6 +166,8 @@ func (h Handler) Hide(c tele.Context) error {
 }
 
 func (h Handler) cuClubs(c tele.Context) error {
+	_ = c.Delete()
+
 	const clubsOnPage = 5
 	h.logger.Infof("(user: %d) get clubs list", c.Sender().ID)
 
@@ -186,7 +191,7 @@ func (h Handler) cuClubs(c tele.Context) error {
 	clubsCount, err = h.clubService.CountByShouldShow(context.Background(), true)
 	if err != nil {
 		h.logger.Errorf("(user: %d) error while getting clubs count: %v", c.Sender().ID, err)
-		return c.Edit(
+		return c.Send(
 			banner.Clubs.Caption(h.layout.Text(c, "technical_issues", err.Error())),
 			h.layout.Markup(c, "mainMenu:back"),
 		)
@@ -210,7 +215,7 @@ func (h Handler) cuClubs(c tele.Context) error {
 			true,
 			err,
 		)
-		return c.Edit(
+		return c.Send(
 			banner.Clubs.Caption(h.layout.Text(c, "technical_issues", err.Error())),
 			h.layout.Markup(c, "mainMenu:back"),
 		)
@@ -221,7 +226,7 @@ func (h Handler) cuClubs(c tele.Context) error {
 	markup := c.Bot().NewMarkup()
 	for _, club := range clubs {
 		h.logger.Debugf("Club: %s (%s)", club.Name, club.ID)
-		rows = append(rows, markup.Row(*h.layout.Button(c, "cuClubs:club", struct {
+		rows = append(rows, markup.Row(*h.layout.Button(c, "cuClubs:club:intro", struct {
 			ID   string
 			Name string
 			Page int
@@ -284,14 +289,14 @@ func (h Handler) cuClubs(c tele.Context) error {
 		prevPage,
 	)
 
-	_ = c.Edit(
-		banner.Events.Caption(h.layout.Text(c, "cu_clubs_list")),
+	_ = c.Send(
+		banner.Clubs.Caption(h.layout.Text(c, "cu_clubs_list")),
 		markup,
 	)
 	return nil
 }
 
-func (h Handler) club(c tele.Context) error {
+func (h Handler) clubIntro(c tele.Context) error {
 	callbackData := strings.Split(c.Callback().Data, " ")
 	if len(callbackData) != 2 {
 		return errorz.ErrInvalidCallbackData
@@ -303,13 +308,13 @@ func (h Handler) club(c tele.Context) error {
 		return errorz.ErrInvalidCallbackData
 	}
 
-	h.logger.Infof("(user: %d) edit club menu (club_id=%s)", c.Sender().ID, clubID)
+	h.logger.Infof("(user: %d) check club intro (club_id=%s)", c.Sender().ID, clubID)
 
 	club, err := h.clubService.Get(context.Background(), clubID)
 	if err != nil {
 		h.logger.Errorf("(user: %d) error while get club: %v", c.Sender().ID, err)
 		return c.Send(
-			banner.ClubOwner.Caption(h.layout.Text(c, "technical_issues", err.Error())),
+			banner.Clubs.Caption(h.layout.Text(c, "technical_issues", err.Error())),
 			h.layout.Markup(c, "cuClubs:back", struct {
 				Page int
 			}{
@@ -318,27 +323,16 @@ func (h Handler) club(c tele.Context) error {
 		)
 	}
 
-	menuMarkup := h.layout.Markup(c, "cuClubs:club:menu", struct {
-		Page int
-	}{
-		Page: page,
-	})
-
-	clubAvatar, err := h.clubService.GetAvatar(context.Background(), club.ID)
-	if err != nil {
-		h.logger.Errorf("(user: %d) error while get clubs: %v", c.Sender().ID, err)
-		return c.Send(
-			banner.ClubOwner.Caption(h.layout.Text(c, "clubs", err.Error())),
-			h.layout.Markup(c, "cuClubs:back"),
-		)
-	}
-
 	clubIntro, err := h.clubService.GetIntro(context.Background(), club.ID)
 	if err != nil {
 		h.logger.Errorf("(user: %d) error while get clubs: %v", c.Sender().ID, err)
 		return c.Send(
-			banner.ClubOwner.Caption(h.layout.Text(c, "clubs", err.Error())),
-			h.layout.Markup(c, "cuClubs:back"),
+			banner.Clubs.Caption(h.layout.Text(c, "technical_issues", err.Error())),
+			h.layout.Markup(c, "cuClubs:back", struct {
+				Page int
+			}{
+				Page: page,
+			}),
 		)
 	}
 
@@ -349,8 +343,39 @@ func (h Handler) club(c tele.Context) error {
 			File: *clubIntro,
 		}
 
-		_ = c.Send(videoNote, h.layout.Markup(c, "core:hide"))
+		err := c.Send(
+			videoNote,
+			h.layout.Markup(c, "cuClubs:club:intro:menu", struct {
+				ID   string
+				Page int
+			}{
+				ID:   club.ID,
+				Page: page,
+			}),
+		)
+		if err == nil {
+			return nil
+		}
 	}
+
+	clubAvatar, err := h.clubService.GetAvatar(context.Background(), club.ID)
+	if err != nil {
+		h.logger.Errorf("(user: %d) error while get clubs: %v", c.Sender().ID, err)
+		return c.Send(
+			banner.Clubs.Caption(h.layout.Text(c, "technical_issues", err.Error())),
+			h.layout.Markup(c, "cuClubs:back", struct {
+				Page int
+			}{
+				Page: page,
+			}),
+		)
+	}
+
+	menuMarkup := h.layout.Markup(c, "cuClubs:back", struct {
+		Page int
+	}{
+		Page: page,
+	})
 
 	if clubAvatar != nil {
 		caption := &tele.Photo{
@@ -377,7 +402,113 @@ func (h Handler) club(c tele.Context) error {
 	}
 
 	return c.Send(
-		banner.ClubOwner.Caption(h.layout.Text(c, "cu_club_text", struct {
+		banner.Clubs.Caption(h.layout.Text(c, "cu_club_text", struct {
+			Club entity.Club
+		}{
+			Club: *club,
+		})),
+		menuMarkup,
+	)
+}
+
+func (h Handler) clubAbout(c tele.Context) error {
+	callbackData := strings.Split(c.Callback().Data, " ")
+	if len(callbackData) != 2 {
+		return errorz.ErrInvalidCallbackData
+	}
+	clubID := callbackData[0]
+	pageStr := callbackData[1]
+	page, err := strconv.Atoi(pageStr)
+	if err != nil {
+		return errorz.ErrInvalidCallbackData
+	}
+
+	h.logger.Infof("(user: %d) edit club menu (club_id=%s)", c.Sender().ID, clubID)
+
+	club, err := h.clubService.Get(context.Background(), clubID)
+	if err != nil {
+		h.logger.Errorf("(user: %d) error while get club: %v", c.Sender().ID, err)
+		return c.Send(
+			banner.Clubs.Caption(h.layout.Text(c, "technical_issues", err.Error())),
+			h.layout.Markup(c, "cuClubs:back", struct {
+				Page int
+			}{
+				Page: page,
+			}),
+		)
+	}
+
+	clubAvatar, err := h.clubService.GetAvatar(context.Background(), club.ID)
+	if err != nil {
+		h.logger.Errorf("(user: %d) error while get clubs: %v", c.Sender().ID, err)
+		return c.Send(
+			banner.Clubs.Caption(h.layout.Text(c, "technical_issues", err.Error())),
+			h.layout.Markup(c, "cuClubs:back", struct {
+				Page int
+			}{
+				Page: page,
+			}),
+		)
+	}
+
+	clubIntro, err := h.clubService.GetIntro(context.Background(), club.ID)
+	if err != nil {
+		h.logger.Errorf("(user: %d) error while get club: %v", c.Sender().ID, err)
+		return c.Send(
+			banner.Clubs.Caption(h.layout.Text(c, "technical_issues", err.Error())),
+			h.layout.Markup(c, "cuClubs:back", struct {
+				Page int
+			}{
+				Page: page,
+			}),
+		)
+	}
+
+	var menuMarkup *tele.ReplyMarkup
+	if clubIntro != nil {
+		menuMarkup = h.layout.Markup(c, "cuClubs:club:intro:back", struct {
+			ID   string
+			Page int
+		}{
+			ID:   clubID,
+			Page: page,
+		})
+	} else {
+		menuMarkup = h.layout.Markup(c, "cuClubs:back", struct {
+			Page int
+		}{
+			Page: page,
+		})
+	}
+
+	_ = c.Delete()
+
+	if clubAvatar != nil {
+		caption := &tele.Photo{
+			File: tele.File{
+				FileID:     clubAvatar.FileID,
+				UniqueID:   clubAvatar.UniqueID,
+				FileSize:   clubAvatar.FileSize,
+				FilePath:   clubAvatar.FilePath,
+				FileLocal:  clubAvatar.FileLocal,
+				FileURL:    clubAvatar.FileURL,
+				FileReader: clubAvatar.FileReader,
+			},
+			Caption: h.layout.Text(c, "cu_club_text", struct {
+				Club entity.Club
+			}{
+				Club: *club,
+			}),
+		}
+
+		return c.Send(
+			caption,
+			menuMarkup,
+		)
+	}
+
+	return c.Send(
+		banner.Clubs.Caption(h.layout.Text(c, "cu_club_text", struct {
 			Club entity.Club
 		}{
 			Club: *club,
@@ -1815,7 +1946,9 @@ func (h Handler) UserSetup(group *tele.Group) {
 	group.Handle(h.layout.Callback("cuClubs:prev_page"), h.cuClubs)
 	group.Handle(h.layout.Callback("cuClubs:next_page"), h.cuClubs)
 	group.Handle(h.layout.Callback("cuClubs:back"), h.cuClubs)
-	group.Handle(h.layout.Callback("cuClubs:club"), h.club)
+	group.Handle(h.layout.Callback("cuClubs:club:intro"), h.clubIntro)
+	group.Handle(h.layout.Callback("cuClubs:club:intro:back"), h.clubIntro)
+	group.Handle(h.layout.Callback("cuClubs:club:about"), h.clubAbout)
 
 	group.Handle(h.layout.Callback("mainMenu:events"), h.eventsList)
 	group.Handle(h.layout.Callback("user:events:prev_page"), h.eventsList)

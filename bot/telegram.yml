@@ -513,10 +513,25 @@ buttons:
     unique: mainMenu_cuClubs
     text: '{{ text `cu_clubs` }}'
 
-  cuClubs:club:
-    unique: cuClubs_club
+  cuClubs:club:intro:
+    unique: cuClubs_club_intro
     callback_data: '{{.ID}} {{.Page}}'
     text: '{{ .Name }}'
+
+  cuClubs:club:intro:back:
+    unique: club_intro_back
+    callback_data: '{{.ID}} {{.Page}}'
+    text: '{{ text `back` }}'
+
+  cuClubs:club:about:
+    unique: cuClubs_club_about
+    callback_data: '{{.ID}} {{.Page}}'
+    text: '{{ text `club_about` }}'
+
+  cuClubs:club:about:back:
+    unique: cuClubs_club_about_back
+    callback_data: '{{.ID}} {{.Page}}'
+    text: '{{ text `back` }}'
 
   cuClubs:prev_page:
     unique: cuClubs_prevPage
@@ -570,8 +585,12 @@ markups:
     - [ mailing:switch ]
     - [ core:hide ]
 
-  cuClubs:club:menu:
+  cuClubs:club:intro:menu:
+    - [ cuClubs:club:about ]
     - [ cuClubs:back ]
+
+  cuClubs:club:intro:back:
+    - [ cuClubs:club:intro:back ]
 
   cuClubs:back:
     - [ cuClubs:back ]

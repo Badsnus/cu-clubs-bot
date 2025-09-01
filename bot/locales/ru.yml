@@ -107,6 +107,7 @@ main_menu_text: |-
   <b>Главное меню</b>
 events: Мероприятия
 cu_clubs: Клубы ЦУ
+club_about: О клубе
 personal_account: Личный кабинет
 personal_account_text: |- 
   <i>Добро пожаловать {{.Name}}, ваша роль <b>{{if eq .Role "student"}}студент{{else if eq .Role "grant_user"}}абитуриент{{else if eq .Role "external_user"}}внешний пользователь{{else}}не определена{{end}}</b></i>
@@ -138,7 +139,7 @@ cu_club_text: |-
   <blockquote>{{if .Club.Description}}{{html .Club.Description}}{{else}}<i>Не указано</i>{{end}}</blockquote>
 
   <b>Ссылка на чат/канал клуба:</b>
-  {{if .Club.Link}}<code>{{html .Club.Link}}</code>{{else}}Не указана{{end}}
+  {{if .Club.Link}}{{html .Club.Link}}{{else}}Не указана{{end}}
 events_list: |-
   <b>Список мероприятий</b>
 event_text: |-
@@ -208,7 +209,7 @@ club_owner_club_menu_text: |-
   <blockquote>{{if .Club.Description}}{{html .Club.Description}}{{else}}<i>Не указано</i>{{end}}</blockquote>
   
   <b>Ссылка на чат/канал клуба:</b>
-  {{if .Club.Link}}<code>{{html .Club.Link}}</code>{{else}}Не указано{{end}}
+  {{if .Club.Link}}{{html .Club.Link}}{{else}}Не указано{{end}}
 
 club_settings: Настройки
 club_settings_text: |-
@@ -236,13 +237,13 @@ set_club_description: Установить описание
 input_club_description: |-
   <b>Введите описание клуба</b>
 invalid_club_description: |-
-  <b>Описание клуба должно быть не более 400 символов</b>
+  <b>Описание клуба должно быть не более 500 символов</b>
 club_description_set: <b>Описание клуба успешно установлено ✅</b>
 set_club_link: Установить ссылку на канал/чат клуба
 input_club_link: |-
   <b>Укажите ссылку на канал/чат клуба</b>
 invalid_club_link: |-
-  <b>Ссылка должна быть корректной</b>
+  <b>Ссылка должна быть корректной и не более 100 символов</b>
 club_link_set: <b>Ссылка на канал/чат клуба успешно установлено ✅</b>
 set_club_avatar: Установить аватар
 input_club_avatar: |-
