@@ -166,8 +166,6 @@ func (h Handler) Hide(c tele.Context) error {
 }
 
 func (h Handler) cuClubs(c tele.Context) error {
-	_ = c.Delete()
-
 	const clubsOnPage = 5
 	h.logger.Infof("(user: %d) get clubs list", c.Sender().ID)
 
@@ -191,7 +189,7 @@ func (h Handler) cuClubs(c tele.Context) error {
 	clubsCount, err = h.clubService.CountByShouldShow(context.Background(), true)
 	if err != nil {
 		h.logger.Errorf("(user: %d) error while getting clubs count: %v", c.Sender().ID, err)
-		return c.Send(
+		return c.Edit(
 			banner.Clubs.Caption(h.layout.Text(c, "technical_issues", err.Error())),
 			h.layout.Markup(c, "mainMenu:back"),
 		)
@@ -215,7 +213,7 @@ func (h Handler) cuClubs(c tele.Context) error {
 			true,
 			err,
 		)
-		return c.Send(
+		return c.Edit(
 			banner.Clubs.Caption(h.layout.Text(c, "technical_issues", err.Error())),
 			h.layout.Markup(c, "mainMenu:back"),
 		)
@@ -289,7 +287,7 @@ func (h Handler) cuClubs(c tele.Context) error {
 		prevPage,
 	)
 
-	_ = c.Send(
+	_ = c.Edit(
 		banner.Clubs.Caption(h.layout.Text(c, "cu_clubs_list")),
 		markup,
 	)
@@ -313,7 +311,7 @@ func (h Handler) clubIntro(c tele.Context) error {
 	club, err := h.clubService.Get(context.Background(), clubID)
 	if err != nil {
 		h.logger.Errorf("(user: %d) error while get club: %v", c.Sender().ID, err)
-		return c.Send(
+		return c.Edit(
 			banner.Clubs.Caption(h.layout.Text(c, "technical_issues", err.Error())),
 			h.layout.Markup(c, "cuClubs:back", struct {
 				Page int
@@ -326,7 +324,7 @@ func (h Handler) clubIntro(c tele.Context) error {
 	clubIntro, err := h.clubService.GetIntro(context.Background(), club.ID)
 	if err != nil {
 		h.logger.Errorf("(user: %d) error while get clubs: %v", c.Sender().ID, err)
-		return c.Send(
+		return c.Edit(
 			banner.Clubs.Caption(h.layout.Text(c, "technical_issues", err.Error())),
 			h.layout.Markup(c, "cuClubs:back", struct {
 				Page int
@@ -336,13 +334,12 @@ func (h Handler) clubIntro(c tele.Context) error {
 		)
 	}
 
-	_ = c.Delete()
-
 	if clubIntro != nil {
 		videoNote := &tele.VideoNote{
 			File: *clubIntro,
 		}
 
+		_ = c.Delete()
 		err := c.Send(
 			videoNote,
 			h.layout.Markup(c, "cuClubs:club:intro:menu", struct {
@@ -361,7 +358,7 @@ func (h Handler) clubIntro(c tele.Context) error {
 	clubAvatar, err := h.clubService.GetAvatar(context.Background(), club.ID)
 	if err != nil {
 		h.logger.Errorf("(user: %d) error while get clubs: %v", c.Sender().ID, err)
-		return c.Send(
+		return c.Edit(
 			banner.Clubs.Caption(h.layout.Text(c, "technical_issues", err.Error())),
 			h.layout.Markup(c, "cuClubs:back", struct {
 				Page int
@@ -395,13 +392,13 @@ func (h Handler) clubIntro(c tele.Context) error {
 			}),
 		}
 
-		return c.Send(
+		return c.Edit(
 			caption,
 			menuMarkup,
 		)
 	}
 
-	return c.Send(
+	return c.Edit(
 		banner.Clubs.Caption(h.layout.Text(c, "cu_club_text", struct {
 			Club entity.Club
 		}{
@@ -422,6 +419,8 @@ func (h Handler) clubAbout(c tele.Context) error {
 	if err != nil {
 		return errorz.ErrInvalidCallbackData
 	}
+
+	_ = c.Delete()
 
 	h.logger.Infof("(user: %d) edit club menu (club_id=%s)", c.Sender().ID, clubID)
 
@@ -451,37 +450,11 @@ func (h Handler) clubAbout(c tele.Context) error {
 		)
 	}
 
-	clubIntro, err := h.clubService.GetIntro(context.Background(), club.ID)
-	if err != nil {
-		h.logger.Errorf("(user: %d) error while get club: %v", c.Sender().ID, err)
-		return c.Send(
-			banner.Clubs.Caption(h.layout.Text(c, "technical_issues", err.Error())),
-			h.layout.Markup(c, "cuClubs:back", struct {
-				Page int
-			}{
-				Page: page,
-			}),
-		)
-	}
-
-	var menuMarkup *tele.ReplyMarkup
-	if clubIntro != nil {
-		menuMarkup = h.layout.Markup(c, "cuClubs:club:intro:back", struct {
-			ID   string
-			Page int
-		}{
-			ID:   clubID,
-			Page: page,
-		})
-	} else {
-		menuMarkup = h.layout.Markup(c, "cuClubs:back", struct {
-			Page int
-		}{
-			Page: page,
-		})
-	}
-
-	_ = c.Delete()
+	menuMarkup := h.layout.Markup(c, "cuClubs:back", struct {
+		Page int
+	}{
+		Page: page,
+	})
 
 	if clubAvatar != nil {
 		caption := &tele.Photo{
