@@ -587,10 +587,9 @@ markups:
 
   cuClubs:club:intro:menu:
     - [ cuClubs:club:about ]
-    - [ cuClubs:back ]
 
-  cuClubs:club:intro:back:
-    - [ cuClubs:club:intro:back ]
+  cuClubs:club:menu:
+    - [ cuClubs:back ]
 
   cuClubs:back:
     - [ cuClubs:back ]
