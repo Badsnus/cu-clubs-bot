@@ -17,7 +17,7 @@ type Club struct {
 	Link        string
 	AvatarID    string
 	IntroID     string
-	ShouldShow  bool `gorm:"default:true"`
+	ShouldShow  bool `gorm:"default:false"`
 	// AllowedRoles - list of roles for which this group can create events
 	AllowedRoles pq.StringArray `gorm:"type:text[]"`
 	// QrAllowed - true if group can create qr code that can be scanned by users for event registration
