@@ -25,7 +25,7 @@ type Config struct {
 	SMTPDialer *gomail.Dialer
 }
 
-func initConfig() {
+func initConfig() error {
 	viper.SetConfigName("config")
 	viper.SetConfigType("yaml")
 
@@ -36,16 +36,20 @@ func initConfig() {
 	viper.AddConfigPath("../../")
 
 	if err := viper.ReadInConfig(); err != nil {
-		panic(err)
+		return fmt.Errorf("failed to read config: %w", err)
 	}
 
 	if err := os.Setenv("BOT_TOKEN", viper.GetString("bot.token")); err != nil {
-		panic(err)
+		return fmt.Errorf("failed to set BOT_TOKEN environment variable: %w", err)
 	}
+
+	return nil
 }
 
-func Get() *Config {
-	initConfig()
+func Get() (*Config, error) {
+	if err := initConfig(); err != nil {
+		return nil, err
+	}
 
 	err := logger.Init(logger.Config{
 		Debug:        viper.GetBool("settings.logging.debug"),
@@ -54,7 +58,7 @@ func Get() *Config {
 		LogsDir:      viper.GetString("settings.logging.logs-dir"),
 	})
 	if err != nil {
-		panic(err)
+		return nil, fmt.Errorf("failed to initialize logger: %w", err)
 	}
 
 	var gormConfig *gorm.Config
@@ -92,14 +96,25 @@ func Get() *Config {
 
 	database, err := gorm.Open(postgres.Open(dsn), gormConfig)
 	if err != nil {
-		logger.Log.Panicf("Failed to connect to the database: %v", err)
-	} else {
-		logger.Log.Infof("Successfully connected to the database (%s)", viper.GetString("service.database.name"))
+		return nil, fmt.Errorf("failed to connect to the database: %w", err)
 	}
+	logger.Log.Infof("Successfully connected to the database (%s)", viper.GetString("service.database.name"))
+
+	sqlDB, err := database.DB()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get underlying sql.DB: %w", err)
+	}
+
+	sqlDB.SetMaxOpenConns(25)
+	sqlDB.SetMaxIdleConns(10)
+	sqlDB.SetConnMaxLifetime(5 * time.Minute)
+	sqlDB.SetConnMaxIdleTime(1 * time.Minute)
+
+	logger.Log.Info("Database connection pool configured")
 
 	errMigrate := database.AutoMigrate(postgresStorage.Migrations...)
 	if errMigrate != nil {
-		logger.Log.Panicf("Failed to migrate database: %v", errMigrate)
+		return nil, fmt.Errorf("failed to migrate database: %w", errMigrate)
 	}
 
 	r, err := redis.New(redis.Options{
@@ -108,7 +123,7 @@ func Get() *Config {
 		Password: viper.GetString("service.redis.password"),
 	})
 	if err != nil {
-		logger.Log.Panicf("Failed to connect to the redis: %v", err)
+		return nil, fmt.Errorf("failed to connect to redis: %w", err)
 	}
 
 	dialer := gomail.NewDialer(
@@ -122,5 +137,5 @@ func Get() *Config {
 		Database:   database,
 		Redis:      r,
 		SMTPDialer: dialer,
-	}
+	}, nil
 }

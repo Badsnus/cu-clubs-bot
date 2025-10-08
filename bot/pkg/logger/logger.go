@@ -16,6 +16,14 @@ var (
 	logHook types.LogHook
 )
 
+// Cleanup closes all open resources
+func Cleanup() error {
+	if Log != nil && Log.FileWriter != nil {
+		return Log.FileWriter.Close()
+	}
+	return nil
+}
+
 // Config represents configuration options for logger initialization
 type Config struct {
 	Debug        bool           // Enable debug logging
@@ -101,6 +109,9 @@ func Init(config Config) error {
 		if errOpenFile != nil {
 			return errOpenFile
 		}
+
+		// Store file writer reference for cleanup
+		l.FileWriter = fileWriter
 
 		fileCore := zapcore.NewCore(fileEncoder, zapcore.AddSync(fileWriter), level)
 		cores = append(cores, fileCore)
