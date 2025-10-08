@@ -4,15 +4,16 @@ import (
 	"bytes"
 	"context"
 	"errors"
-	"github.com/xuri/excelize/v2"
 	"slices"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/xuri/excelize/v2"
+
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/utils"
 
-	"github.com/Badsnus/cu-clubs-bot/bot/cmd/bot"
+	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/controller/telegram/bot"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/controller/telegram/handlers/middlewares"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/database/postgres"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/database/redis/events"

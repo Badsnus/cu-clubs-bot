@@ -3,16 +3,17 @@ package start
 import (
 	"context"
 	"errors"
+	"strings"
+	"time"
+
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/database/redis/callbacks"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/database/redis/events"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/utils/banner"
 	qr "github.com/Badsnus/cu-clubs-bot/bot/pkg/qrcode"
 	"github.com/redis/go-redis/v9"
 	"github.com/spf13/viper"
-	"strings"
-	"time"
 
-	"github.com/Badsnus/cu-clubs-bot/bot/cmd/bot"
+	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/controller/telegram/bot"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/controller/telegram/handlers/menu"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/database/postgres"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/database/redis/codes"

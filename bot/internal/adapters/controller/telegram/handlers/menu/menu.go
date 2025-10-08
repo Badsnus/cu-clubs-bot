@@ -2,7 +2,8 @@ package menu
 
 import (
 	"context"
-	"github.com/Badsnus/cu-clubs-bot/bot/cmd/bot"
+
+	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/controller/telegram/bot"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/database/postgres"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/entity"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/service"

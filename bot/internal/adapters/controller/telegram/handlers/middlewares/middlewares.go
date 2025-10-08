@@ -3,14 +3,15 @@ package middlewares
 import (
 	"context"
 	"errors"
-	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/utils/banner"
 	"strings"
+
+	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/utils/banner"
 
 	"github.com/Badsnus/cu-clubs-bot/bot/pkg/logger/types"
 	"github.com/nlypage/intele"
 	"gorm.io/gorm"
 
-	"github.com/Badsnus/cu-clubs-bot/bot/cmd/bot"
+	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/controller/telegram/bot"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/database/postgres"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/entity"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/service"
@@ -49,16 +50,6 @@ func New(b *bot.Bot) *Handler {
 		userService: userServiceLocal,
 		clubService: service.NewClubService(b.Bot, clubStorage),
 		input:       b.Input,
-	}
-}
-
-func (h Handler) LoadBanners(next tele.HandlerFunc) tele.HandlerFunc {
-	return func(c tele.Context) error {
-		err := banner.Load(c.Bot())
-		if err != nil {
-			return err
-		}
-		return next(c)
 	}
 }
 

@@ -1,9 +1,9 @@
 package setup
 
 import (
-	"github.com/Badsnus/cu-clubs-bot/bot/cmd/bot"
+	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/controller/telegram/bot"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/controller/telegram/handlers/admin"
-	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/controller/telegram/handlers/clubOwner"
+	clubowner "github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/controller/telegram/handlers/clubOwner"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/controller/telegram/handlers/menu"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/controller/telegram/handlers/middlewares"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/controller/telegram/handlers/start"
@@ -59,7 +59,6 @@ func Setup(b *bot.Bot) {
 	if viper.GetBool("settings.logging.debug") {
 		b.Use(middleware.Logger())
 	}
-	b.Use(middle.LoadBanners)
 	b.Use(b.Layout.Middleware("ru"))
 	b.Use(middleware.AutoRespond())
 	b.Handle(tele.OnText, b.Input.MessageHandler())
