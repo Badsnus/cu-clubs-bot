@@ -3,6 +3,9 @@ package admin
 import (
 	"context"
 	"errors"
+	"strconv"
+	"strings"
+
 	"github.com/Badsnus/cu-clubs-bot/bot/cmd/bot"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/database/postgres"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/common/errorz"
@@ -17,8 +20,6 @@ import (
 	tele "gopkg.in/telebot.v3"
 	"gopkg.in/telebot.v3/layout"
 	"gorm.io/gorm"
-	"strconv"
-	"strings"
 )
 
 type adminUserService interface {

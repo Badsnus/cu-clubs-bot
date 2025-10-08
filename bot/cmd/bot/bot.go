@@ -1,8 +1,12 @@
 package bot
 
 import (
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
+
 	"github.com/nlypage/intele"
-	"sync"
 
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/database/redis"
 
@@ -75,49 +79,88 @@ func New(config *config.Config) (*Bot, error) {
 }
 
 func (b *Bot) Start() {
-	var wg sync.WaitGroup
-	wg.Add(1)
+	logger.Log.Info("Bot starting")
 
+	// Setup logging hook if enabled
+	if viper.GetBool("settings.logging.log-to-channel") {
+		notifyLogger, err := logger.Named("notify")
+		if err != nil {
+			logger.Log.Errorf("Failed to create notify logger: %v", err)
+		} else {
+			notifyService := service.NewNotifyService(b.Bot, b.Layout, notifyLogger, nil, nil, nil, nil)
+			logHook, err := notifyService.LogHook(
+				viper.GetInt64("settings.logging.channel-id"),
+				viper.GetString("settings.logging.locale"),
+				zapcore.Level(viper.GetInt("settings.logging.channel-log-level")),
+			)
+			if err != nil {
+				logger.Log.Errorf("Failed to create notify log hook: %v", err)
+			} else {
+				logger.SetLogHook(logHook)
+			}
+		}
+	}
+
+	// Send version notification if enabled
+	if viper.GetBool("settings.version.notify-on-startup") {
+		versionLogger, err := logger.Named("version")
+		if err != nil {
+			logger.Log.Errorf("Failed to create version logger: %v", err)
+		} else {
+			versionService := service.NewVersionService(b.Bot, b.Layout, versionLogger)
+			err := versionService.SendStartupNotification(
+				viper.GetInt64("settings.version.channel-id"),
+			)
+			if err != nil {
+				logger.Log.Errorf("Failed to send version notification: %v", err)
+			}
+		}
+	}
+
+	// Setup signal handling
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+
+	// Start bot in goroutine
 	go func() {
-		defer wg.Done()
-		logger.Log.Info("Bot starting")
-
-		if viper.GetBool("settings.logging.log-to-channel") {
-			notifyLogger, err := logger.Named("notify")
-			if err != nil {
-				logger.Log.Errorf("Failed to create notify logger: %v", err)
-			} else {
-				notifyService := service.NewNotifyService(b.Bot, b.Layout, notifyLogger, nil, nil, nil, nil)
-				logHook, err := notifyService.LogHook(
-					viper.GetInt64("settings.logging.channel-id"),
-					viper.GetString("settings.logging.locale"),
-					zapcore.Level(viper.GetInt("settings.logging.channel-log-level")),
-				)
-				if err != nil {
-					logger.Log.Errorf("Failed to create notify log hook: %v", err)
-				} else {
-					logger.SetLogHook(logHook)
-				}
-			}
-		}
-
-		// Send version notification if enabled
-		if viper.GetBool("settings.version.notify-on-startup") {
-			versionLogger, err := logger.Named("version")
-			if err != nil {
-				logger.Log.Errorf("Failed to create version logger: %v", err)
-			} else {
-				versionService := service.NewVersionService(b.Bot, b.Layout, versionLogger)
-				err := versionService.SendStartupNotification(
-					viper.GetInt64("settings.version.channel-id"),
-				)
-				if err != nil {
-					logger.Log.Errorf("Failed to send version notification: %v", err)
-				}
-			}
-		}
 		b.Bot.Start()
 	}()
 
-	wg.Wait()
+	// Wait for shutdown signal
+	sig := <-sigChan
+	logger.Log.Infof("Received signal %v, starting graceful shutdown...", sig)
+	b.gracefulShutdown()
+}
+
+func (b *Bot) gracefulShutdown() {
+	logger.Log.Info("Starting graceful shutdown...")
+
+	// Stop the bot
+	logger.Log.Info("Stopping bot...")
+	b.Bot.Stop()
+	logger.Log.Info("Bot stopped")
+
+	// Close database connection
+	if b.DB != nil {
+		logger.Log.Info("Closing database connection...")
+		sqlDB, err := b.DB.DB()
+		if err != nil {
+			logger.Log.Errorf("Failed to get underlying sql.DB: %v", err)
+		} else {
+			if err := sqlDB.Close(); err != nil {
+				logger.Log.Errorf("Error closing database connection: %v", err)
+			} else {
+				logger.Log.Info("Database connection closed")
+			}
+		}
+	}
+
+	// Final log and cleanup
+	logger.Log.Info("Graceful shutdown completed")
+	time.Sleep(100 * time.Millisecond) // Allow final log to be written
+
+	// Close logger resources last
+	if err := logger.Cleanup(); err != nil {
+		_ = err
+	}
 }

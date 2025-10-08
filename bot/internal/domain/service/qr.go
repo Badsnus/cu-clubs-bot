@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/entity"
 	qr "github.com/Badsnus/cu-clubs-bot/bot/pkg/qrcode"
 	"github.com/google/uuid"

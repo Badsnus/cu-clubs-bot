@@ -1,17 +1,18 @@
 package types
 
 import (
+	"os"
 	"time"
 
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
 
-// Logger represents a logger
 type Logger struct {
 	*zap.SugaredLogger
-	LogsPath string
-	Name     string
+	LogsPath   string
+	Name       string
+	FileWriter *os.File
 }
 
 // Log represents a log entry
