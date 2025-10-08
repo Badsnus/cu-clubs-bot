@@ -4,6 +4,10 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"strconv"
+	"strings"
+	"time"
+
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/dto"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/utils/location"
 	"github.com/Badsnus/cu-clubs-bot/bot/pkg/logger/types"
@@ -11,9 +15,6 @@ import (
 	"github.com/xuri/excelize/v2"
 	tele "gopkg.in/telebot.v3"
 	"gopkg.in/telebot.v3/layout"
-	"strconv"
-	"strings"
-	"time"
 
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/entity"
 )
@@ -198,15 +199,15 @@ func (s *EventParticipantService) checkAndSend(ctx context.Context) {
 		return
 	}
 
-	//var participantsWithoutStudents []entity.User
-	//for _, participant := range participants {
-	//	if !(participant.Role == entity.Student) {
-	//		participantsWithoutStudents = append(participantsWithoutStudents, participant)
-	//	}
-	//}
-	//if len(participantsWithoutStudents) == 0 {
-	//	return
-	//}
+	var participantsWithoutStudents []entity.User
+	for _, participant := range participants {
+		if !(participant.Role == entity.Student) {
+			participantsWithoutStudents = append(participantsWithoutStudents, participant)
+		}
+	}
+	if len(participantsWithoutStudents) == 0 {
+		return
+	}
 
 	clubs, err := s.clubStorage.GetManyByIDs(context.Background(), clubsIDs)
 	if err != nil {
