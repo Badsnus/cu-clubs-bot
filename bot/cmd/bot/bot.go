@@ -1,7 +1,6 @@
 package bot
 
 import (
-	"context"
 	"os"
 	"os/signal"
 	"syscall"
@@ -80,16 +79,9 @@ func New(config *config.Config) (*Bot, error) {
 }
 
 func (b *Bot) Start() {
-	// Create context for graceful shutdown
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	// Setup signal handling
-	sigChan := make(chan os.Signal, 1)
-	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
-
 	logger.Log.Info("Bot starting")
 
+	// Setup logging hook if enabled
 	if viper.GetBool("settings.logging.log-to-channel") {
 		notifyLogger, err := logger.Named("notify")
 		if err != nil {
@@ -125,19 +117,18 @@ func (b *Bot) Start() {
 		}
 	}
 
+	// Setup signal handling
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+
 	// Start bot in goroutine
 	go func() {
 		b.Bot.Start()
 	}()
 
 	// Wait for shutdown signal
-	select {
-	case sig := <-sigChan:
-		logger.Log.Infof("Received signal %v, initiating graceful shutdown...", sig)
-	case <-ctx.Done():
-		logger.Log.Info("Context cancelled, initiating shutdown...")
-	}
-
+	sig := <-sigChan
+	logger.Log.Infof("Received signal %v, starting graceful shutdown...", sig)
 	b.gracefulShutdown()
 }
 
@@ -145,13 +136,17 @@ func (b *Bot) gracefulShutdown() {
 	logger.Log.Info("Starting graceful shutdown...")
 
 	// Stop the bot
+	logger.Log.Info("Stopping bot...")
 	b.Bot.Stop()
 	logger.Log.Info("Bot stopped")
 
 	// Close database connection
 	if b.DB != nil {
+		logger.Log.Info("Closing database connection...")
 		sqlDB, err := b.DB.DB()
-		if err == nil {
+		if err != nil {
+			logger.Log.Errorf("Failed to get underlying sql.DB: %v", err)
+		} else {
 			if err := sqlDB.Close(); err != nil {
 				logger.Log.Errorf("Error closing database connection: %v", err)
 			} else {
@@ -160,12 +155,12 @@ func (b *Bot) gracefulShutdown() {
 		}
 	}
 
-	// Final log before closing logger
+	// Final log and cleanup
 	logger.Log.Info("Graceful shutdown completed")
+	time.Sleep(100 * time.Millisecond) // Allow final log to be written
 
-	// Give some time for final log to write
-	time.Sleep(100 * time.Millisecond)
-
-	// Close logger resources LAST
-	_ = logger.Cleanup()
+	// Close logger resources last
+	if err := logger.Cleanup(); err != nil {
+		_ = err
+	}
 }
