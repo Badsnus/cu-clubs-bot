@@ -8,9 +8,10 @@ import (
 	"os"
 	"time"
 
-	"github.com/Badsnus/cu-clubs-bot/bot/pkg/logger"
 	"github.com/google/uuid"
 	"gopkg.in/gomail.v2"
+
+	"github.com/Badsnus/cu-clubs-bot/bot/pkg/logger"
 )
 
 // Client представляет почтовый клиент.

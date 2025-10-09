@@ -1,11 +1,13 @@
 package utils
 
 import (
-	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/utils/location"
-	"github.com/spf13/viper"
-	tele "gopkg.in/telebot.v3"
 	"slices"
 	"time"
+
+	"github.com/spf13/viper"
+	tele "gopkg.in/telebot.v3"
+
+	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/utils/location"
 )
 
 func IsAdmin(userID int64) bool {

@@ -1,9 +1,10 @@
 package location
 
 import (
-	"github.com/spf13/viper"
 	"log"
 	"time"
+
+	"github.com/spf13/viper"
 )
 
 var location *time.Location

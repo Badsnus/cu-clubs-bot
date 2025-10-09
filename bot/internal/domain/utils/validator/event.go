@@ -1,10 +1,11 @@
 package validator
 
 import (
-	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/utils/location"
 	"strconv"
 	"time"
 	"unicode/utf8"
+
+	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/utils/location"
 )
 
 func EventName(name string, _ map[string]interface{}) bool {

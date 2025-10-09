@@ -2,10 +2,14 @@ package app
 
 import (
 	"fmt"
-	"time"
-
 	"log"
 	"os"
+	"time"
+
+	"gopkg.in/gomail.v2"
+	postgresDriver "gorm.io/driver/postgres"
+	"gorm.io/gorm"
+	gormLogger "gorm.io/gorm/logger"
 
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/config"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/controller/telegram/bot"
@@ -15,10 +19,6 @@ import (
 	"github.com/Badsnus/cu-clubs-bot/bot/pkg/logger"
 	qr "github.com/Badsnus/cu-clubs-bot/bot/pkg/qrcode"
 	"github.com/Badsnus/cu-clubs-bot/bot/pkg/smtp"
-	"gopkg.in/gomail.v2"
-	postgresDriver "gorm.io/driver/postgres"
-	"gorm.io/gorm"
-	gormLogger "gorm.io/gorm/logger"
 )
 
 type serviceProvider struct {

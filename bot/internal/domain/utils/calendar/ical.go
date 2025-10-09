@@ -3,8 +3,9 @@ package calendar
 import (
 	"bytes"
 	"fmt"
-	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/entity"
 	"time"
+
+	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/entity"
 
 	ics "github.com/arran4/golang-ical"
 )

@@ -2,9 +2,10 @@ package callbacks
 
 import (
 	"context"
+	"time"
+
 	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
-	"time"
 )
 
 // CallbackStorage - is a storage for callbacks

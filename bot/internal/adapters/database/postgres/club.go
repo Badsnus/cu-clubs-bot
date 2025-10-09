@@ -3,8 +3,9 @@ package postgres
 import (
 	"context"
 
-	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/entity"
 	"gorm.io/gorm"
+
+	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/entity"
 )
 
 type ClubStorage struct {

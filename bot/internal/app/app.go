@@ -7,12 +7,13 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/spf13/viper"
+	"go.uber.org/zap/zapcore"
+
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/controller/telegram/bot"
 	setupBot "github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/controller/telegram/setup"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/utils/banner"
 	"github.com/Badsnus/cu-clubs-bot/bot/pkg/logger"
-	"github.com/spf13/viper"
-	"go.uber.org/zap/zapcore"
 )
 
 // App represents the main application structure.
@@ -47,7 +48,7 @@ func (a *App) Run() {
 
 	// Start bot in goroutine
 	go func() {
-		a.serviceProvider.Bot().Bot.Start()
+		a.serviceProvider.Bot().Start()
 	}()
 
 	// Wait for shutdown signal
@@ -63,7 +64,7 @@ func (a *App) gracefulShutdown() {
 	if a.serviceProvider != nil {
 		if a.serviceProvider.bot != nil {
 			logger.Log.Info("Stopping bot...")
-			a.serviceProvider.bot.Bot.Stop()
+			a.serviceProvider.bot.Stop()
 			logger.Log.Info("Bot stopped")
 		}
 

@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/dto"
 
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/entity"

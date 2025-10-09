@@ -3,11 +3,13 @@ package start
 import (
 	"context"
 	"errors"
-	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/entity"
-	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/utils/banner"
+	"log"
+
 	"github.com/redis/go-redis/v9"
 	tele "gopkg.in/telebot.v3"
-	"log"
+
+	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/entity"
+	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/utils/banner"
 )
 
 func (h Handler) changeRole(c tele.Context, authCode string) error {

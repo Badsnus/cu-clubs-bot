@@ -12,6 +12,14 @@ import (
 	"strings"
 	"time"
 
+	"github.com/nlypage/intele"
+	"github.com/nlypage/intele/collector"
+	"github.com/redis/go-redis/v9"
+	"github.com/spf13/viper"
+	tele "gopkg.in/telebot.v3"
+	"gopkg.in/telebot.v3/layout"
+	"gorm.io/gorm"
+
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/controller/telegram/bot"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/controller/telegram/handlers/menu"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/database/postgres"
@@ -31,13 +39,6 @@ import (
 	"github.com/Badsnus/cu-clubs-bot/bot/pkg/logger/types"
 	qr "github.com/Badsnus/cu-clubs-bot/bot/pkg/qrcode"
 	"github.com/Badsnus/cu-clubs-bot/bot/pkg/smtp"
-	"github.com/nlypage/intele"
-	"github.com/nlypage/intele/collector"
-	"github.com/redis/go-redis/v9"
-	"github.com/spf13/viper"
-	tele "gopkg.in/telebot.v3"
-	"gopkg.in/telebot.v3/layout"
-	"gorm.io/gorm"
 )
 
 type userService interface {
@@ -131,7 +132,6 @@ func New(b *bot.Bot) *Handler {
 		viper.GetInt64("bot.qr.channel-id"),
 		viper.GetString("settings.qr.logo-path"),
 	)
-
 	if err != nil {
 		b.Logger.Fatalf("failed to create qr service: %v", err)
 	}
@@ -203,7 +203,6 @@ func (h Handler) cuClubs(c tele.Context) error {
 		p*clubsOnPage,
 		"created_at ASC",
 	)
-
 	if err != nil {
 		h.logger.Errorf(
 			"(user: %d) error while get clubs (offset=%d, limit=%d, order=%s, should_show=%t): %v",
@@ -842,7 +841,6 @@ func (h Handler) event(c tele.Context) error {
 					}
 				}
 				registered = true
-
 			} else {
 				switch {
 				case event.RegistrationEnd.Before(time.Now().In(location.Location())):
@@ -1092,7 +1090,6 @@ func (h Handler) eventCancelRegistration(c tele.Context) error {
 					}
 				}
 				registered = true
-
 			} else {
 				switch {
 				case event.RegistrationEnd.Before(time.Now().In(location.Location())):
@@ -1359,7 +1356,6 @@ func (h Handler) myEvents(c tele.Context) error {
 		markup,
 	)
 	return nil
-
 }
 
 func (h Handler) myEvent(c tele.Context) error {
@@ -1496,7 +1492,7 @@ func (h Handler) myEventCancelRegistration(c tele.Context) error {
 		return errorz.ErrInvalidCallbackData
 	}
 	eventID := callbackData[0]
-	//page := callbackData[1]
+	// page := callbackData[1]
 
 	err := h.eventParticipantService.Delete(context.Background(), eventID, c.Sender().ID)
 	if err != nil {

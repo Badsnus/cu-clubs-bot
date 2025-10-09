@@ -3,6 +3,9 @@ package menu
 import (
 	"context"
 
+	tele "gopkg.in/telebot.v3"
+	"gopkg.in/telebot.v3/layout"
+
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/controller/telegram/bot"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/database/postgres"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/entity"
@@ -10,8 +13,6 @@ import (
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/utils"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/utils/banner"
 	"github.com/Badsnus/cu-clubs-bot/bot/pkg/logger/types"
-	tele "gopkg.in/telebot.v3"
-	"gopkg.in/telebot.v3/layout"
 )
 
 type clubService interface {
@@ -50,7 +51,7 @@ func (h Handler) SendMenu(c tele.Context) error {
 		)
 	}
 
-	//if len(userClubs) == 1 {
+	// if len(userClubs) == 1 {
 	//	menuMarkup.InlineKeyboard = append(menuMarkup.InlineKeyboard, []tele.InlineButton{*h.layout.Button(c, "clubOwner:myClubs:club", struct {
 	//		ID   string
 	//		Name string
@@ -88,7 +89,7 @@ func (h Handler) EditMenu(c tele.Context) error {
 		)
 	}
 
-	//if len(userClubs) == 1 {
+	// if len(userClubs) == 1 {
 	//	menuMarkup.InlineKeyboard = append(menuMarkup.InlineKeyboard, []tele.InlineButton{*h.layout.Button(c, "clubOwner:myClubs:club", struct {
 	//		ID   string
 	//		Name string
@@ -97,7 +98,7 @@ func (h Handler) EditMenu(c tele.Context) error {
 	//		Name: userClubs[0].Name,
 	//	}).Inline()})
 	//}
-	//if len(userClubs) > 1 {
+	// if len(userClubs) > 1 {
 	//	menuMarkup.InlineKeyboard = append(menuMarkup.InlineKeyboard, []tele.InlineButton{*h.layout.Button(c, "clubOwner:my_clubs").Inline()})
 	//}
 	if len(userClubs) > 0 {

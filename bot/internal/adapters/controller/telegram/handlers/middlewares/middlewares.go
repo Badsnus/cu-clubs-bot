@@ -7,16 +7,18 @@ import (
 
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/utils/banner"
 
-	"github.com/Badsnus/cu-clubs-bot/bot/pkg/logger/types"
 	"github.com/nlypage/intele"
 	"gorm.io/gorm"
+
+	"github.com/Badsnus/cu-clubs-bot/bot/pkg/logger/types"
+
+	tele "gopkg.in/telebot.v3"
+	"gopkg.in/telebot.v3/layout"
 
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/controller/telegram/bot"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/database/postgres"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/entity"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/service"
-	tele "gopkg.in/telebot.v3"
-	"gopkg.in/telebot.v3/layout"
 )
 
 type userService interface {
@@ -124,7 +126,7 @@ func (h Handler) IsClubOwner(next tele.HandlerFunc) tele.HandlerFunc {
 	}
 }
 
-//func (h Handler) Localisation(next tele.HandlerFunc) tele.HandlerFunc {
+// func (h Handler) Localisation(next tele.HandlerFunc) tele.HandlerFunc {
 //	return func(c tele.Context) error {
 //		user, err := h.userService.Get(context.Background(), c.Sender().ID)
 //		if err != nil {
@@ -142,7 +144,7 @@ func (h Handler) IsClubOwner(next tele.HandlerFunc) tele.HandlerFunc {
 //	}
 //}
 
-//func (h Handler) SetupLocalisation(r tele.Recipient) string {
+// func (h Handler) SetupLocalisation(r tele.Recipient) string {
 //	userID, err := strconv.Atoi(r.Recipient())
 //	if err != nil {
 //		return ""
@@ -158,7 +160,6 @@ func (h Handler) IsClubOwner(next tele.HandlerFunc) tele.HandlerFunc {
 // ResetInputOnBack middleware clears the input state when the back button is pressed.
 func (h Handler) ResetInputOnBack(next tele.HandlerFunc) tele.HandlerFunc {
 	return func(c tele.Context) error {
-
 		if c.Callback() != nil {
 			if strings.Contains(c.Callback().Data, "back") || strings.Contains(c.Callback().Unique, "back") {
 				h.input.Cancel(c.Sender().ID)

@@ -8,13 +8,14 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/dto"
-	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/utils/location"
-	"github.com/Badsnus/cu-clubs-bot/bot/pkg/logger/types"
 	"github.com/robfig/cron/v3"
 	"github.com/xuri/excelize/v2"
 	tele "gopkg.in/telebot.v3"
 	"gopkg.in/telebot.v3/layout"
+
+	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/dto"
+	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/utils/location"
+	"github.com/Badsnus/cu-clubs-bot/bot/pkg/logger/types"
 
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/entity"
 )
@@ -176,16 +177,17 @@ func (s *EventParticipantService) checkAndSend(ctx context.Context) {
 
 		// Determine notification time
 		var notificationTime time.Time
-		if weekday == time.Sunday {
+		switch weekday {
+		case time.Sunday:
 			notificationTime = time.Date(eventStartTime.Year(), eventStartTime.Month(), eventStartTime.Day()-1, 12, 0, 0, 0, location.Location())
-		} else if weekday == time.Monday {
+		case time.Monday:
 			notificationTime = time.Date(eventStartTime.Year(), eventStartTime.Month(), eventStartTime.Day()-2, 12, 0, 0, 0, location.Location())
-		} else {
+		default:
 			notificationTime = time.Date(eventStartTime.Year(), eventStartTime.Month(), eventStartTime.Day(), 0, 0, 0, 0, eventStartTime.Location()).Add(-24 * time.Hour).Add(16 * time.Hour)
 		}
 
 		// Check if it's valid event for notification and it's time to send the notification
-		if (strings.Contains(event.Location, "Гашека 7")) && !(now.Before(notificationTime) || now.After(notificationTime.Add(1*time.Hour))) {
+		if (strings.Contains(event.Location, "Гашека 7")) && (!now.Before(notificationTime) && !now.After(notificationTime.Add(1*time.Hour))) {
 			eventIDs = append(eventIDs, event.ID)
 			clubsIDs = append(clubsIDs, event.ClubID)
 			eventStartDate = event.StartTime.In(location.Location())
@@ -201,7 +203,7 @@ func (s *EventParticipantService) checkAndSend(ctx context.Context) {
 
 	var participantsWithoutStudents []entity.User
 	for _, participant := range participants {
-		if !(participant.Role == entity.Student) {
+		if participant.Role != entity.Student {
 			participantsWithoutStudents = append(participantsWithoutStudents, participant)
 		}
 	}

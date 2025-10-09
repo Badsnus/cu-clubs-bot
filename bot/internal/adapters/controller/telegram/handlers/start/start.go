@@ -6,12 +6,17 @@ import (
 	"strings"
 	"time"
 
+	"github.com/redis/go-redis/v9"
+	"github.com/spf13/viper"
+
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/database/redis/callbacks"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/database/redis/events"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/utils/banner"
 	qr "github.com/Badsnus/cu-clubs-bot/bot/pkg/qrcode"
-	"github.com/redis/go-redis/v9"
-	"github.com/spf13/viper"
+
+	tele "gopkg.in/telebot.v3"
+	"gopkg.in/telebot.v3/layout"
+	"gorm.io/gorm"
 
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/controller/telegram/bot"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/controller/telegram/handlers/menu"
@@ -21,9 +26,6 @@ import (
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/entity"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/service"
 	"github.com/Badsnus/cu-clubs-bot/bot/pkg/logger/types"
-	tele "gopkg.in/telebot.v3"
-	"gopkg.in/telebot.v3/layout"
-	"gorm.io/gorm"
 )
 
 type userService interface {
@@ -54,7 +56,7 @@ type eventService interface {
 		additionalTime time.Duration,
 	) ([]entity.Event, error)
 	GetByQRCodeID(ctx context.Context, qrCodeID string) (*entity.Event, error)
-	//CountFutureByClubID(ctx context.Context, clubID string) (int64, error)
+	// CountFutureByClubID(ctx context.Context, clubID string) (int64, error)
 }
 
 type eventParticipantService interface {

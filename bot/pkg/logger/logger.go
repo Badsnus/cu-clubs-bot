@@ -6,9 +6,10 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/Badsnus/cu-clubs-bot/bot/pkg/logger/types"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
+
+	"github.com/Badsnus/cu-clubs-bot/bot/pkg/logger/types"
 )
 
 var (
@@ -105,7 +106,7 @@ func Init(config Config) error {
 	// Add file output if enabled
 	if config.LogToFile {
 		mainLogPath := filepath.Join(l.LogsPath, fmt.Sprintf("%s.log", time.Now().Format("2006-01-02 15:04")))
-		fileWriter, errOpenFile := os.OpenFile(mainLogPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		fileWriter, errOpenFile := os.OpenFile(mainLogPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
 		if errOpenFile != nil {
 			return errOpenFile
 		}
@@ -146,7 +147,7 @@ func Named(name string) (*types.Logger, error) {
 		return nil, fmt.Errorf("logger is not initialized")
 	}
 	return &types.Logger{
-		SugaredLogger: Log.SugaredLogger.Named(name),
+		SugaredLogger: Log.Named(name),
 		LogsPath:      Log.LogsPath,
 		Name:          name,
 	}, nil
