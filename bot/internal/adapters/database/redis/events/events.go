@@ -4,8 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/entity"
 	"time"
+
+	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/entity"
 
 	"github.com/redis/go-redis/v9"
 )

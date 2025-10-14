@@ -1,6 +1,10 @@
 package setup
 
 import (
+	"github.com/spf13/viper"
+	tele "gopkg.in/telebot.v3"
+	"gopkg.in/telebot.v3/middleware"
+
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/controller/telegram/bot"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/controller/telegram/handlers/admin"
 	clubowner "github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/controller/telegram/handlers/clubOwner"
@@ -12,9 +16,6 @@ import (
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/service"
 	"github.com/Badsnus/cu-clubs-bot/bot/pkg/logger"
 	"github.com/Badsnus/cu-clubs-bot/bot/pkg/smtp"
-	"github.com/spf13/viper"
-	tele "gopkg.in/telebot.v3"
-	"gopkg.in/telebot.v3/middleware"
 )
 
 func Setup(b *bot.Bot) {
@@ -71,17 +72,17 @@ func Setup(b *bot.Bot) {
 	b.Handle(b.Layout.Callback("core:back"), userHandler.Hide)
 
 	// Setup handlers
-	//Start
+	// Start
 	b.Handle("/start", startHandler.Start)
 
-	//Auth
+	// Auth
 	userHandler.AuthSetup(b.Group())
 	b.Use(middle.Authorized)
 
-	//Qr
+	// Qr
 	startHandler.SetupUserQR(b.Group())
 
-	//User:
+	// User:
 	b.Handle(b.Layout.Callback("mainMenu:back"), menuHandler.EditMenu)
 	userHandler.UserSetup(b.Group())
 	startHandler.SetupURLEvent(b.Group())
@@ -89,7 +90,7 @@ func Setup(b *bot.Bot) {
 	// ClubOwner:
 	clubOwnerHandler.ClubOwnerSetup(b.Group(), middle)
 
-	//Admin:
+	// Admin:
 	admins := viper.GetIntSlice("bot.admin-ids")
 	adminsInt64 := make([]int64, len(admins))
 	for i, v := range admins {
@@ -97,15 +98,4 @@ func Setup(b *bot.Bot) {
 	}
 	b.Use(middleware.Whitelist(adminsInt64...))
 	adminHandler.AdminSetup(b.Group())
-
-	//adminHandler := handlers.NewAdminHandler(b)
-	//b.Handle("/admin", adminHandler.AdminMenu)
-	//b.Handle(b.Layout.Callback("backToAdminMenu"), adminHandler.BackToAdminMenu)
-	//b.Handle(b.Layout.Callback("manageUsers"), adminHandler.UsersList)
-	//b.Handle(b.Layout.Callback("backToUsersList"), adminHandler.UsersList)
-	//b.Handle(b.Layout.Callback("user"), adminHandler.ManageUser)
-	//b.Handle(b.Layout.Callback("banUser"), adminHandler.BanUser)
-	//b.Handle(b.Layout.Callback("mailing"), adminHandler.Mailing)
-	//b.Handle(b.Layout.Callback("confirmMailing"), adminHandler.SendMailing)
-	//b.Handle(b.Layout.Callback("cancelMailing"), adminHandler.BackToAdminMenu)
 }

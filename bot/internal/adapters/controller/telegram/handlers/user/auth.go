@@ -3,6 +3,15 @@ package user
 import (
 	"context"
 	"errors"
+	"math"
+	"time"
+
+	"github.com/nlypage/intele/collector"
+	"github.com/redis/go-redis/v9"
+	"github.com/spf13/viper"
+	tele "gopkg.in/telebot.v3"
+	"gorm.io/gorm"
+
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/database/redis/codes"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/database/redis/emails"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/entity"
@@ -10,13 +19,6 @@ import (
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/utils/banner"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/utils/location"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/utils/validator"
-	"github.com/nlypage/intele/collector"
-	"github.com/redis/go-redis/v9"
-	"github.com/spf13/viper"
-	tele "gopkg.in/telebot.v3"
-	"gorm.io/gorm"
-	"math"
-	"time"
 )
 
 func (h Handler) declinePersonalDataAgreement(c tele.Context) error {

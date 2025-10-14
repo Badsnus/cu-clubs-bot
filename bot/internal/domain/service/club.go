@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+
 	tele "gopkg.in/telebot.v3"
 
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/entity"

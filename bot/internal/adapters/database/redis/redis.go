@@ -3,12 +3,14 @@ package redis
 import (
 	"context"
 	"fmt"
+
+	"github.com/redis/go-redis/v9"
+
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/database/redis/callbacks"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/database/redis/codes"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/database/redis/emails"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/database/redis/events"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/database/redis/states"
-	"github.com/redis/go-redis/v9"
 )
 
 type Client struct {

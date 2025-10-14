@@ -3,9 +3,10 @@ package banner
 import (
 	"fmt"
 
+	tele "gopkg.in/telebot.v3"
+
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/config"
 	"github.com/Badsnus/cu-clubs-bot/bot/pkg/logger"
-	tele "gopkg.in/telebot.v3"
 )
 
 type Banner tele.File

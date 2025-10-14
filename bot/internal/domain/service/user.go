@@ -6,6 +6,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
+
 	"github.com/Badsnus/cu-clubs-bot/bot/pkg/smtp"
 
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/dto"

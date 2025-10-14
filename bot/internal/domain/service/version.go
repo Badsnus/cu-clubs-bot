@@ -5,9 +5,10 @@ import (
 	"os"
 	"time"
 
-	"github.com/Badsnus/cu-clubs-bot/bot/pkg/logger/types"
 	tele "gopkg.in/telebot.v3"
 	"gopkg.in/telebot.v3/layout"
+
+	"github.com/Badsnus/cu-clubs-bot/bot/pkg/logger/types"
 )
 
 // VersionService handles version information and notifications

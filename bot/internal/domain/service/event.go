@@ -2,8 +2,9 @@ package service
 
 import (
 	"context"
-	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/dto"
 	"time"
+
+	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/dto"
 
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/entity"
 )
@@ -85,7 +86,7 @@ func (s *EventService) GetFutureByClubID(
 	return s.eventStorage.GetFutureByClubID(ctx, limit, offset, order, clubID, additionalTime)
 }
 
-//func (s *EventService) CountFutureByClubID(ctx context.Context, clubID string) (int64, error) {
+// func (s *EventService) CountFutureByClubID(ctx context.Context, clubID string) (int64, error) {
 //	return s.eventStorage.CountFutureByClubID(ctx, clubID)
 //}
 

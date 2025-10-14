@@ -3,13 +3,14 @@ package bot
 import (
 	"github.com/nlypage/intele"
 
-	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/database/redis"
-	"github.com/Badsnus/cu-clubs-bot/bot/pkg/logger"
-	"github.com/Badsnus/cu-clubs-bot/bot/pkg/logger/types"
 	"gopkg.in/gomail.v2"
 	tele "gopkg.in/telebot.v3"
 	"gopkg.in/telebot.v3/layout"
 	"gorm.io/gorm"
+
+	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/database/redis"
+	"github.com/Badsnus/cu-clubs-bot/bot/pkg/logger"
+	"github.com/Badsnus/cu-clubs-bot/bot/pkg/logger/types"
 )
 
 type Bot struct {

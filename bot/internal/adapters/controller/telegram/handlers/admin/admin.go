@@ -6,6 +6,12 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/nlypage/intele"
+	"github.com/nlypage/intele/collector"
+	tele "gopkg.in/telebot.v3"
+	"gopkg.in/telebot.v3/layout"
+	"gorm.io/gorm"
+
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/controller/telegram/bot"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/database/postgres"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/common/errorz"
@@ -15,11 +21,6 @@ import (
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/utils/banner"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/utils/validator"
 	"github.com/Badsnus/cu-clubs-bot/bot/pkg/logger/types"
-	"github.com/nlypage/intele"
-	"github.com/nlypage/intele/collector"
-	tele "gopkg.in/telebot.v3"
-	"gopkg.in/telebot.v3/layout"
-	"gorm.io/gorm"
 )
 
 type adminUserService interface {
@@ -740,9 +741,7 @@ func (h Handler) manageRoles(c tele.Context) error {
 	})
 
 	for _, role := range entity.AllRoles {
-		var (
-			on bool
-		)
+		var on bool
 		for _, allowedRole := range club.AllowedRoles {
 			if allowedRole == role.String() {
 				on = true

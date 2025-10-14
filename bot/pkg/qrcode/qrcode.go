@@ -26,7 +26,6 @@ type Config struct {
 	LogoBackground  color.Color
 	LogoBorderWidth float64 // Width of logo border
 	LogoFade        float64 // Logo fade effect
-
 }
 
 // Generate creates a QR code with the given configuration and returns it as a byte slice

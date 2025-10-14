@@ -3,15 +3,18 @@ package start
 import (
 	"context"
 	"errors"
+	"time"
+
+	"gorm.io/gorm"
+
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/utils"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/utils/banner"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/utils/location"
-	"gorm.io/gorm"
-	"time"
 
-	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/entity"
 	"github.com/redis/go-redis/v9"
 	tele "gopkg.in/telebot.v3"
+
+	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/entity"
 )
 
 func (h Handler) auth(c tele.Context, authCode string) error {

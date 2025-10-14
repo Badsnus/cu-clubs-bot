@@ -2,9 +2,11 @@ package postgres
 
 import (
 	"context"
+
+	"gorm.io/gorm"
+
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/dto"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/entity"
-	"gorm.io/gorm"
 )
 
 type UserStorage struct {

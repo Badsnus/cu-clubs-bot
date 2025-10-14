@@ -1,0 +1,137 @@
+# golangci-lint configuration file
+
+version: 2
+
+run:
+  timeout: 5m
+  tests: true
+
+output:
+  format: colored-line-number
+  print-issued-lines: true
+  print-linter-name: true
+
+linters-settings:
+  errcheck:
+    check-type-assertions: true
+    check-blank: false
+
+  govet:
+    check-shadowing: true
+
+  gocyclo:
+    min-complexity: 15
+
+  dupl:
+    threshold: 100
+
+  goconst:
+    min-len: 3
+    min-occurrences: 3
+
+  goimports:
+    local-prefixes: github.com/Badsnus/cu-clubs-bot
+
+  revive:
+    rules:
+      - name: blank-imports
+      - name: context-as-argument
+      - name: context-keys-type
+      - name: dot-imports
+      - name: empty-block
+      - name: error-return
+      - name: error-strings
+      - name: errorf
+      - name: exported
+      - name: increment-decrement
+      - name: indent-error-flow
+      - name: range
+      - name: receiver-naming
+      - name: redefines-builtin-id
+      - name: superfluous-else
+      - name: time-naming
+      - name: unexported-return
+      - name: unreachable-code
+      - name: unused-parameter
+      - name: var-declaration
+      - name: var-naming
+
+  funlen:
+    lines: 80
+    statements: 50
+
+  gocognit:
+    min-complexity: 20
+
+  nestif:
+    min-complexity: 4
+
+  lll:
+    line-length: 120
+
+  unused:
+    field-writes-are-uses: true
+
+  misspell:
+    locale: US
+
+linters:
+  disable-all: true
+  enable:
+    # Core linters
+    - errcheck
+    - govet
+    - ineffassign
+    - staticcheck
+    - unused
+
+    # Style and quality linters
+    - revive
+    - gocyclo
+    - gocognit
+    - funlen
+    - dupl
+    - goconst
+    - misspell
+    - lll
+    - unconvert
+    - prealloc
+    - nestif
+    - whitespace
+    - asciicheck
+    - bodyclose
+    - durationcheck
+    - errorlint
+    - makezero
+    - nilerr
+    - predeclared
+    - wastedassign
+    - gocritic
+    - goprintffuncname
+    - noctx
+    - rowserrcheck
+    - sqlclosecheck
+    - bidichk
+    - contextcheck
+    - nilnil
+    - thelper
+    - usestdlibvars
+
+issues:
+  exclude:
+    # Common patterns to exclude
+    - Error return value of .((os\.)?std(out|err)\..*|.*Close|.*Flush|os\.Remove(All)?|.*print.*|os\.(Un)?Setenv). is not checked
+
+  exclude-rules:
+    # Exclude some linters from running on tests
+    - path: _test\.go
+      linters:
+        - gocyclo
+        - errcheck
+        - dupl
+        - funlen
+        - goconst
+        - gocognit
+
+  max-issues-per-linter: 0
+  max-same-issues: 0

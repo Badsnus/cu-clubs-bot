@@ -13,6 +13,13 @@ import (
 
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/utils"
 
+	"github.com/nlypage/intele"
+	"github.com/nlypage/intele/collector"
+	"github.com/spf13/viper"
+	tele "gopkg.in/telebot.v3"
+	"gopkg.in/telebot.v3/layout"
+	"gorm.io/gorm"
+
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/controller/telegram/bot"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/controller/telegram/handlers/middlewares"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/database/postgres"
@@ -26,12 +33,6 @@ import (
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/utils/validator"
 	"github.com/Badsnus/cu-clubs-bot/bot/pkg/logger/types"
 	qr "github.com/Badsnus/cu-clubs-bot/bot/pkg/qrcode"
-	"github.com/nlypage/intele"
-	"github.com/nlypage/intele/collector"
-	"github.com/spf13/viper"
-	tele "gopkg.in/telebot.v3"
-	"gopkg.in/telebot.v3/layout"
-	"gorm.io/gorm"
 )
 
 type clubService interface {
@@ -1205,7 +1206,6 @@ func (h Handler) setClubIntro(c tele.Context) error {
 			}
 
 			msg, err := h.bot.Send(&tele.Chat{ID: h.introChannelID}, response.Message.VideoNote)
-
 			if err != nil {
 				_ = inputCollector.Send(c,
 					banner.ClubOwner.Caption(h.layout.Text(c, "invalid_club_intro")),
@@ -1292,9 +1292,7 @@ func (h Handler) shouldShow(c tele.Context) error {
 }
 
 func (h Handler) warnings(c tele.Context) error {
-	var (
-		clubID string
-	)
+	var clubID string
 	if c.Callback().Unique == "clubOwner_club_warnings" {
 		h.logger.Infof("(user: %d) club warning settings (club_id=%s)", c.Sender().ID, c.Callback().Data)
 		if c.Callback().Data == "" {
@@ -2145,7 +2143,6 @@ func (h Handler) event(c tele.Context) error {
 		})),
 		eventMarkup,
 	)
-
 }
 
 func (h Handler) eventSettings(c tele.Context) error {
@@ -2852,7 +2849,6 @@ func (h Handler) eventMailing(c tele.Context) error {
 			Page: page,
 		}),
 	)
-
 }
 
 func (h Handler) mailingRegistered(c tele.Context) error {
@@ -3574,8 +3570,8 @@ func (h Handler) registeredUsers(c tele.Context) error {
 	}
 
 	eventID := data[0]
-	//page := data[1]
-	//h.logger.Infof("(user: %d) get registered users (eventID=%s)", c.Sender().ID, eventID)
+	// page := data[1]
+	// h.logger.Infof("(user: %d) get registered users (eventID=%s)", c.Sender().ID, eventID)
 	//
 	//event, err := h.eventService.Get(context.Background(), eventID)
 	//if err != nil {
@@ -3585,8 +3581,8 @@ func (h Handler) registeredUsers(c tele.Context) error {
 	//	)
 	//}
 
-	//club, err := h.clubService.Get(context.Background(), event.ClubID)
-	//if err != nil {
+	// club, err := h.clubService.Get(context.Background(), event.ClubID)
+	// if err != nil {
 	//	return c.Send(
 	//		banner.ClubOwner.Caption(h.layout.Text(c, "technical_issues", err.Error())),
 	//		h.layout.Markup(c, "core:hide"),
@@ -3608,8 +3604,8 @@ func (h Handler) registeredUsers(c tele.Context) error {
 	//	)
 	//}
 
-	//visitedUsersCount, err := h.eventParticipantService.CountVisitedByEventID(context.Background(), event.ID)
-	//if err != nil {
+	// visitedUsersCount, err := h.eventParticipantService.CountVisitedByEventID(context.Background(), event.ID)
+	// if err != nil {
 	//	h.logger.Errorf("(user: %d) error while get visited users count: %v", c.Sender().ID, err)
 	//	return c.Edit(
 	//		banner.ClubOwner.Caption(h.layout.Text(c, "technical_issues", err.Error())),

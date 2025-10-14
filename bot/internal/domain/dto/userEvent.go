@@ -1,10 +1,12 @@
 package dto
 
 import (
+	"time"
+
+	"github.com/lib/pq"
+
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/entity"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/utils/location"
-	"github.com/lib/pq"
-	"time"
 )
 
 type UserEvent struct {

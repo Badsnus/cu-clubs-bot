@@ -2,10 +2,12 @@ package entity
 
 import (
 	"fmt"
-	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/utils/location"
+	"time"
+
 	"github.com/lib/pq"
 	"gorm.io/gorm"
-	"time"
+
+	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/utils/location"
 )
 
 type Event struct {

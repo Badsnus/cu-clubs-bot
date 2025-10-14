@@ -3,14 +3,16 @@ package start
 import (
 	"context"
 	"errors"
+	"time"
+
+	"github.com/spf13/viper"
+	tele "gopkg.in/telebot.v3"
+	"gorm.io/gorm"
+
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/entity"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/utils"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/utils/banner"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/utils/location"
-	"github.com/spf13/viper"
-	tele "gopkg.in/telebot.v3"
-	"gorm.io/gorm"
-	"time"
 )
 
 func (h Handler) eventMenu(c tele.Context, eventID string) error {

@@ -1,10 +1,11 @@
 package validator
 
 import (
-	"github.com/spf13/viper"
 	"net/mail"
 	"regexp"
 	"strings"
+
+	"github.com/spf13/viper"
 )
 
 func Fio(fio string, _ map[string]interface{}) bool {

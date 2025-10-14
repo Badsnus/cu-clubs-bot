@@ -2,17 +2,19 @@ package service
 
 import (
 	"context"
-	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/utils/location"
 	"strings"
 	"time"
+
+	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/utils/location"
 
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/dto"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/entity"
 
-	"github.com/Badsnus/cu-clubs-bot/bot/pkg/logger/types"
 	"go.uber.org/zap/zapcore"
 	tele "gopkg.in/telebot.v3"
 	"gopkg.in/telebot.v3/layout"
+
+	"github.com/Badsnus/cu-clubs-bot/bot/pkg/logger/types"
 )
 
 type clubOwnerService interface {

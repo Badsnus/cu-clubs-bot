@@ -6,9 +6,10 @@ import (
 
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/utils/location"
 
+	"gorm.io/gorm"
+
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/dto"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/entity"
-	"gorm.io/gorm"
 )
 
 type EventStorage struct {
@@ -147,7 +148,7 @@ func (s *EventStorage) GetUpcomingEvents(ctx context.Context, before time.Time) 
 	return events, err
 }
 
-//func (s *EventStorage) CountFutureByClubID(ctx context.Context, clubID string) (int64, error) {
+// func (s *EventStorage) CountFutureByClubID(ctx context.Context, clubID string) (int64, error) {
 //	var count int64
 //	err := s.db.WithContext(ctx).
 //		Where("club_id = ? AND start_time > ?", clubID, time.Now().In(location.Location)).

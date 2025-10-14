@@ -1,4 +1,4 @@
-name: Go Lint and Format Check
+name: Go Tests
 
 on:
   pull_request:
@@ -10,11 +10,11 @@ on:
     paths:
       - "bot/**"
       - "Makefile"
-      - ".github/workflows/lint.yml"
+      - ".github/workflows/test.yml"
 
 jobs:
-  lint:
-    name: Run Go Code Checks
+  test:
+    name: Run Go Tests
     runs-on: ubuntu-latest
 
     steps:
@@ -30,14 +30,16 @@ jobs:
         run: |
           make install-tools
 
-      - name: Run Go linting
+      - name: Run Go tests
         run: |
-          make go-lint
+          make go-test
 
-      - name: Run Go formatting check
+      - name: Run Go tests with coverage
         run: |
-          make go-fmt
+          make go-test-coverage
 
-      - name: Run Go vet
-        run: |
-          make go-vet
+      - name: Archive code coverage results
+        uses: actions/upload-artifact@v4
+        with:
+          name: code-coverage-report
+          path: bot/coverage.html

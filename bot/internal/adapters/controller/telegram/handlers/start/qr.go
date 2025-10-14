@@ -4,11 +4,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/utils/banner"
-	tele "gopkg.in/telebot.v3"
-	"gorm.io/gorm"
 	"strings"
 	"time"
+
+	tele "gopkg.in/telebot.v3"
+	"gorm.io/gorm"
+
+	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/utils/banner"
 )
 
 func (h Handler) userQR(c tele.Context, qrCodeID string) error {

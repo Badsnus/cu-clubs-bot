@@ -5,10 +5,11 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/entity"
-	qr "github.com/Badsnus/cu-clubs-bot/bot/pkg/qrcode"
 	"github.com/google/uuid"
 	tele "gopkg.in/telebot.v3"
+
+	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/entity"
+	qr "github.com/Badsnus/cu-clubs-bot/bot/pkg/qrcode"
 )
 
 type qrUserService interface {
@@ -33,7 +34,7 @@ type QrService struct {
 func NewQrService(bot *tele.Bot, qrCFG qr.Config, userService qrUserService, eventService qrEventService, qrChatID int64, logoPath string) (*QrService, error) {
 	chat, err := bot.ChatByID(qrChatID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get qr chat: %v", err)
+		return nil, fmt.Errorf("failed to get qr chat: %w", err)
 	}
 	qrCFG.LogoPath = logoPath
 	return &QrService{
