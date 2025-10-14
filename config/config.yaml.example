@@ -1,25 +1,3 @@
-service:
-  database:
-    host: "database"
-    user: "user"
-    password: "password"
-    port: 5400
-    name: "database"
-    ssl-mode: "disable"
-
-  redis:
-    host: "redis"
-    password: "password"
-    port: 6380
-
-  smtp:
-    domain: domain.ru
-    host: smtp.domain.ru
-    port: 587
-    login: 3587
-    pass: very-strong-password
-    email: email@domain.ru
-
 bot:
   token: "BOT_TOKEN"
   admin-ids:
@@ -42,20 +20,34 @@ bot:
         - edu.centraluniversity.ru
         - centraluniversity.ru
   qr:
-    channel-id: -400000000
+    channel-id: -10000000000
   pass:
-    channel-id: -400000000
+    channel-id: -10000000000
   avatar:
-    channel-id: -400000000
+    channel-id: -10000000000
   intro:
-    channel-id: -400000000
+    channel-id: -10000000000
   mailing:
-    channel-id: -400000000
+    channel-id: -10000000000
 
 settings:
-    pass-emails: # Почты, куда будут отправляться списки на пропуска
-        - firstemail@domain.ru
-        - secondemail@domain.ru
+    # Система пропусков
+    pass:
+        # Email адреса для отправки пропусков
+        emails:
+            - firstemail@domain.ru
+
+        # id телеграмм канала для отправки пропусков
+        channel-id: -10000000000
+
+        # Роли пользователей, которым НЕ отправляются пропуски
+        # Возможные роли: external_user, grant_user, student
+        excluded-roles:
+            - "student" # Исключаем студентов
+
+        # Подстроки в названии локации, при наличии которых требуется пропуск
+        location-substrings:
+            - "Гашека 7"
 
     html:
       email-confirmation: "./mail.html"
@@ -75,3 +67,25 @@ settings:
     version:
       channel-id: -10000000000 # канал для уведомлений о версиях
       notify-on-startup: false # отправлять уведомления при запуске
+
+infrastructure:
+  database:
+    host: "database"
+    user: "user"
+    password: "password"
+    port: 5400
+    name: "database"
+    ssl-mode: "disable"
+
+  redis:
+    host: "redis"
+    password: "password"
+    port: 6380
+
+  smtp:
+    domain: domain.ru
+    host: smtp.domain.ru
+    port: 587
+    login: 3587
+    pass: very-strong-password
+    email: email@domain.ru

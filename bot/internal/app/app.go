@@ -60,8 +60,16 @@ func (a *App) Run() {
 func (a *App) gracefulShutdown() {
 	logger.Log.Info("Starting graceful shutdown...")
 
-	// Stop the bot
+	// Stop schedulers
 	if a.serviceProvider != nil {
+		// Stop pass scheduler
+		if a.serviceProvider.passService != nil {
+			logger.Log.Info("Stopping pass scheduler...")
+			a.serviceProvider.passService.StopScheduler()
+			logger.Log.Info("Pass scheduler stopped")
+		}
+
+		// Stop the bot
 		if a.serviceProvider.bot != nil {
 			logger.Log.Info("Stopping bot...")
 			a.serviceProvider.bot.Stop()
@@ -101,6 +109,7 @@ func (a *App) initDeps(ctx context.Context) error {
 		a.initLogger,
 		a.initBot,
 		a.initBanner,
+		a.initPassScheduler,
 	}
 
 	for _, f := range inits {
@@ -190,5 +199,15 @@ func (a *App) initBanner(_ context.Context) error {
 	if err != nil {
 		return fmt.Errorf("failed to initialize banners: %w", err)
 	}
+	return nil
+}
+
+// initPassScheduler initializes and starts the pass scheduler
+func (a *App) initPassScheduler(ctx context.Context) error {
+	err := a.serviceProvider.PassService().StartScheduler(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to start pass scheduler: %w", err)
+	}
+
 	return nil
 }

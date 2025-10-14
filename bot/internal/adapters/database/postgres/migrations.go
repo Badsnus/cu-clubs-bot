@@ -11,4 +11,5 @@ var Migrations = []interface{}{
 	&entity.Event{},
 	&entity.EventParticipant{},
 	&entity.EventNotification{},
+	&entity.Pass{},
 }

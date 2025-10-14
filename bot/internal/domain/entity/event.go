@@ -28,6 +28,7 @@ type Event struct {
 	QRCodeID              string
 	QRFileID              string
 	AllowedRoles          pq.StringArray `gorm:"type:text[]"`
+	PassRequired          bool           `gorm:"default:false"`
 }
 
 // IsOver checks if the event is over, considering the additional time

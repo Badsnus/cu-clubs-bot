@@ -39,6 +39,7 @@ type serviceProvider struct {
 	clubStorage             *postgres.ClubStorage
 	eventStorage            *postgres.EventStorage
 	eventParticipantStorage *postgres.EventParticipantStorage
+	passStorage             *postgres.PassStorage
 	clubOwnerStorage        *postgres.ClubOwnerStorage
 	notificationStorage     *postgres.NotificationStorage
 
@@ -47,6 +48,7 @@ type serviceProvider struct {
 	clubService             *service.ClubService
 	eventService            *service.EventService
 	eventParticipantService *service.EventParticipantService
+	passService             *service.PassService
 	clubOwnerService        *service.ClubOwnerService
 	notifyService           *service.NotifyService
 	qrService               *service.QrService
@@ -204,6 +206,14 @@ func (s *serviceProvider) EventParticipantStorage() *postgres.EventParticipantSt
 	return s.eventParticipantStorage
 }
 
+func (s *serviceProvider) PassStorage() *postgres.PassStorage {
+	if s.passStorage == nil {
+		s.passStorage = postgres.NewPassStorage(s.DB())
+	}
+
+	return s.passStorage
+}
+
 func (s *serviceProvider) ClubOwnerStorage() *postgres.ClubOwnerStorage {
 	if s.clubOwnerStorage == nil {
 		s.clubOwnerStorage = postgres.NewClubOwnerStorage(s.DB())
@@ -259,10 +269,31 @@ func (s *serviceProvider) EventParticipantService() *service.EventParticipantSer
 		}
 
 		s.eventParticipantService = service.NewEventParticipantService(
+			botLogger,
+			s.EventParticipantStorage(),
+			s.EventStorage(),
+			s.PassStorage(),
+			s.UserStorage(),
+			s.cfg.App.PassExcludedRoles(),
+			s.cfg.App.PassLocationSubstrings(),
+		)
+	}
+
+	return s.eventParticipantService
+}
+
+func (s *serviceProvider) PassService() *service.PassService {
+	if s.passService == nil {
+		botLogger, err := logger.Named("pass")
+		if err != nil {
+			panic(fmt.Errorf("failed to create pass logger: %w", err))
+		}
+
+		s.passService = service.NewPassService(
 			s.Bot().Bot,
 			s.Bot().Layout,
 			botLogger,
-			s.EventParticipantStorage(),
+			s.PassStorage(),
 			s.EventStorage(),
 			s.UserStorage(),
 			s.ClubStorage(),
@@ -272,7 +303,7 @@ func (s *serviceProvider) EventParticipantService() *service.EventParticipantSer
 		)
 	}
 
-	return s.eventParticipantService
+	return s.passService
 }
 
 func (s *serviceProvider) ClubOwnerService() *service.ClubOwnerService {

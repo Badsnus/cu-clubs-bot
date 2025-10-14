@@ -98,6 +98,7 @@ func New(b *bot.Bot) *Handler {
 	eventStorage := postgres.NewEventStorage(b.DB)
 	clubStorage := postgres.NewClubStorage(b.DB)
 	eventParticipantStorage := postgres.NewEventParticipantStorage(b.DB)
+	passStorage := postgres.NewPassStorage(b.DB)
 	clubOwnerStorage := postgres.NewClubOwnerStorage(b.DB)
 	notificationStorage := postgres.NewNotificationStorage(b.DB)
 
@@ -121,7 +122,7 @@ func New(b *bot.Bot) *Handler {
 		userService:             userSrvc,
 		clubService:             service.NewClubService(b.Bot, clubStorage),
 		eventService:            eventSrvc,
-		eventParticipantService: service.NewEventParticipantService(b.Bot, b.Layout, b.Logger, eventParticipantStorage, nil, nil, nil, nil, nil, 0),
+		eventParticipantService: service.NewEventParticipantService(b.Logger, eventParticipantStorage, eventStorage, passStorage, userStorage, viper.GetStringSlice("settings.pass.excluded-roles"), viper.GetStringSlice("settings.pass.location-substrings")),
 		qrService:               qrSrvc,
 		notificationService:     service.NewNotifyService(b.Bot, b.Layout, b.Logger, clubOwnerSrvc, eventStorage, notificationStorage, eventParticipantStorage),
 		callbacksStorage:        b.Redis.Callbacks,

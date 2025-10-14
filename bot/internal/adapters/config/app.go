@@ -8,6 +8,8 @@ type AppConfig interface {
 	Timezone() string
 	EmailConfirmationTemplate() string
 	PassEmails() []string
+	PassExcludedRoles() []string
+	PassLocationSubstrings() []string
 	QRLogoPath() string
 	VersionNotifyOnStartup() bool
 	VersionChannelID() int64
@@ -17,6 +19,8 @@ type appConfig struct {
 	timezone                  string
 	emailConfirmationTemplate string
 	passEmails                []string
+	passExcludedRoles         []string
+	passLocationSubstrings    []string
 	qrLogoPath                string
 	versionNotifyOnStartup    bool
 	versionChannelID          int64
@@ -26,7 +30,9 @@ func NewAppConfig() AppConfig {
 	return &appConfig{
 		timezone:                  viper.GetString("settings.timezone"),
 		emailConfirmationTemplate: viper.GetString("settings.html.email-confirmation"),
-		passEmails:                viper.GetStringSlice("settings.pass-emails"),
+		passEmails:                viper.GetStringSlice("settings.pass.emails"),
+		passExcludedRoles:         viper.GetStringSlice("settings.pass.excluded-roles"),
+		passLocationSubstrings:    viper.GetStringSlice("settings.pass.location-substrings"),
 		qrLogoPath:                viper.GetString("settings.qr.logo-path"),
 		versionNotifyOnStartup:    viper.GetBool("settings.version.notify-on-startup"),
 		versionChannelID:          viper.GetInt64("settings.version.channel-id"),
@@ -43,6 +49,14 @@ func (cfg *appConfig) EmailConfirmationTemplate() string {
 
 func (cfg *appConfig) PassEmails() []string {
 	return cfg.passEmails
+}
+
+func (cfg *appConfig) PassExcludedRoles() []string {
+	return cfg.passExcludedRoles
+}
+
+func (cfg *appConfig) PassLocationSubstrings() []string {
+	return cfg.passLocationSubstrings
 }
 
 func (cfg *appConfig) QRLogoPath() string {
