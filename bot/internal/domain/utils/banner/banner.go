@@ -1,7 +1,10 @@
 package banner
 
 import (
-	"github.com/spf13/viper"
+	"fmt"
+
+	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/config"
+	"github.com/Badsnus/cu-clubs-bot/bot/pkg/logger"
 	tele "gopkg.in/telebot.v3"
 )
 
@@ -18,47 +21,75 @@ var (
 	loaded bool
 )
 
-func Load(b *tele.Bot) error {
+func Load(b *tele.Bot, cfg config.BannerConfig) error {
 	if loaded {
 		return nil
 	}
-	auth, err := b.FileByID(viper.GetString("bot.banner.auth"))
+
+	// Validate all banner IDs are configured
+	if cfg.AuthID() == "" {
+		return fmt.Errorf("auth banner ID is not configured")
+	}
+	if cfg.MenuID() == "" {
+		return fmt.Errorf("menu banner ID is not configured")
+	}
+	if cfg.PersonalAccountID() == "" {
+		return fmt.Errorf("personal account banner ID is not configured")
+	}
+	if cfg.ClubsID() == "" {
+		return fmt.Errorf("clubs banner ID is not configured")
+	}
+	if cfg.ClubOwnerID() == "" {
+		return fmt.Errorf("club owner banner ID is not configured")
+	}
+	if cfg.EventsID() == "" {
+		return fmt.Errorf("events banner ID is not configured")
+	}
+
+	// Load Auth banner
+	auth, err := b.FileByID(cfg.AuthID())
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to load auth banner (ID: %s): %w", cfg.AuthID(), err)
 	}
 	Auth = Banner(auth)
 
-	menu, err := b.FileByID(viper.GetString("bot.banner.menu"))
+	// Load Menu banner
+	menu, err := b.FileByID(cfg.MenuID())
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to load menu banner (ID: %s): %w", cfg.MenuID(), err)
 	}
 	Menu = Banner(menu)
 
-	personalAccount, err := b.FileByID(viper.GetString("bot.banner.personal-account"))
+	// Load PersonalAccount banner
+	personalAccount, err := b.FileByID(cfg.PersonalAccountID())
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to load personal account banner (ID: %s): %w", cfg.PersonalAccountID(), err)
 	}
 	PersonalAccount = Banner(personalAccount)
 
-	clubs, err := b.FileByID(viper.GetString("bot.banner.clubs"))
+	// Load Clubs banner
+	clubs, err := b.FileByID(cfg.ClubsID())
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to load clubs banner (ID: %s): %w", cfg.ClubsID(), err)
 	}
 	Clubs = Banner(clubs)
 
-	clubOwner, err := b.FileByID(viper.GetString("bot.banner.club-owner"))
+	// Load ClubOwner banner
+	clubOwner, err := b.FileByID(cfg.ClubOwnerID())
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to load club owner banner (ID: %s): %w", cfg.ClubOwnerID(), err)
 	}
 	ClubOwner = Banner(clubOwner)
 
-	events, err := b.FileByID(viper.GetString("bot.banner.events"))
+	// Load Events banner
+	events, err := b.FileByID(cfg.EventsID())
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to load events banner (ID: %s): %w", cfg.EventsID(), err)
 	}
 	Events = Banner(events)
 
 	loaded = true
+	logger.Log.Info("All banners loaded successfully")
 	return nil
 }
 
