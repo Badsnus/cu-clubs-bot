@@ -3,15 +3,15 @@
 # ================================================================================================
 
 # Цвета для красивого вывода
-RESET := $(shell tput sgr0)
-RED := $(shell tput setaf 1)
-GREEN := $(shell tput setaf 2)
-YELLOW := $(shell tput setaf 3)
-BLUE := $(shell tput setaf 4)
-MAGENTA := $(shell tput setaf 5)
-CYAN := $(shell tput setaf 6)
-WHITE := $(shell tput setaf 7)
-BOLD := $(shell tput bold)
+RESET := $(shell tput sgr0 2>/dev/null || echo "")
+RED := $(shell tput setaf 1 2>/dev/null || echo "")
+GREEN := $(shell tput setaf 2 2>/dev/null || echo "")
+YELLOW := $(shell tput setaf 3 2>/dev/null || echo "")
+BLUE := $(shell tput setaf 4 2>/dev/null || echo "")
+MAGENTA := $(shell tput setaf 5 2>/dev/null || echo "")
+CYAN := $(shell tput setaf 6 2>/dev/null || echo "")
+WHITE := $(shell tput setaf 7 2>/dev/null || echo "")
+BOLD := $(shell tput bold 2>/dev/null || echo "")
 
 # Конфигурация
 DOCKER_COMPOSE_DEV := docker-compose-dev.yml
@@ -204,7 +204,7 @@ install-tools: ## 📥 Установить все необходимые инс
 	@printf "$(YELLOW)$(BOLD)📥 Устанавливаю Go инструменты...$(RESET)\n"
 	@which golangci-lint >/dev/null 2>&1 || { \
 		printf "$(YELLOW)Устанавливаю golangci-lint...$(RESET)\n"; \
-		curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $$(go env GOPATH)/bin v1.55.2; \
+		curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $$(go env GOPATH)/bin v2.5.0; \
 	}
 	@[ -f $$(go env GOPATH)/bin/goimports ] || { \
 		printf "$(YELLOW)Устанавливаю goimports...$(RESET)\n"; \
