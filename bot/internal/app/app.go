@@ -203,8 +203,8 @@ func (a *App) initBanner(_ context.Context) error {
 }
 
 // initPassScheduler initializes and starts the pass scheduler
-func (a *App) initPassScheduler(ctx context.Context) error {
-	err := a.serviceProvider.PassService().StartScheduler(ctx)
+func (a *App) initPassScheduler(_ context.Context) error {
+	err := a.serviceProvider.PassService().StartScheduler()
 	if err != nil {
 		return fmt.Errorf("failed to start pass scheduler: %w", err)
 	}

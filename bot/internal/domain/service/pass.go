@@ -331,7 +331,7 @@ func (s *PassService) HasActivePass(ctx context.Context, eventID string, userID 
 	return s.passStorage.HasActivePass(ctx, eventID, userID)
 }
 
-func (s *PassService) StartScheduler(ctx context.Context) error {
+func (s *PassService) StartScheduler() error {
 	s.logger.Debug("Initializing pass scheduler...")
 
 	for _, config := range s.configs {
@@ -412,7 +412,7 @@ func (s *PassService) processPendingPasses(ctx context.Context, configName strin
 		}
 	}
 
-	s.logger.Info("Processed pending passes",
+	s.logger.Infow("Processed pending passes",
 		"events", len(eventsWithPasses),
 		"totalPasses", len(pendingPasses),
 		"config", configName)
