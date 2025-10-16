@@ -63,3 +63,33 @@ func (e *Event) IsPassRequiredForUser(user *User, excludedRoles []string) bool {
 
 	return true
 }
+
+// CalculateScheduledAt calculates the scheduled time for pass sending based on cron schedule
+func (e *Event) CalculateScheduledAt() time.Time {
+	loc := location.Location()
+	st := e.StartTime.In(loc)
+
+	// Determine timeBeforeEvent based on event day
+	var timeBeforeEvent time.Duration
+	dow := st.Weekday()
+	if dow >= time.Monday && dow <= time.Friday {
+		timeBeforeEvent = 24 * time.Hour
+	} else {
+		timeBeforeEvent = 48 * time.Hour
+	}
+
+	// Calculate send day
+	sendDay := st.Add(-timeBeforeEvent)
+
+	// Determine send time based on send day
+	sendDow := sendDay.Weekday()
+	var sendHour int
+	if sendDow >= time.Monday && sendDow <= time.Friday {
+		sendHour = 16 // Weekdays 16:00
+	} else {
+		sendHour = 12 // Weekends 12:00
+	}
+
+	// Return the send time
+	return time.Date(sendDay.Year(), sendDay.Month(), sendDay.Day(), sendHour, 0, 0, 0, loc)
+}
