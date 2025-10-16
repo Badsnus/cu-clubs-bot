@@ -7,12 +7,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/entity"
-	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/utils/location"
-	"github.com/Badsnus/cu-clubs-bot/bot/pkg/logger/types"
 	"github.com/robfig/cron/v3"
 	"github.com/xuri/excelize/v2"
 	tele "gopkg.in/telebot.v3"
+
+	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/entity"
+	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/utils/location"
+	"github.com/Badsnus/cu-clubs-bot/bot/pkg/logger/types"
 )
 
 /*
