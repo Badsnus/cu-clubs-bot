@@ -21,8 +21,6 @@ bot:
         - centraluniversity.ru
   qr:
     channel-id: -10000000000
-  pass:
-    channel-id: -1000000000
   avatar:
     channel-id: -10000000000
   intro:

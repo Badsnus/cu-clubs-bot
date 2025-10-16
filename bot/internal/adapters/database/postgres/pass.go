@@ -71,6 +71,18 @@ func (s *PassStorage) MarkPassAsSent(ctx context.Context, id string, sentAt time
 	return err
 }
 
+// MarkPassesAsSent is a function that marks multiple passes as sent.
+func (s *PassStorage) MarkPassesAsSent(ctx context.Context, ids []string, sentAt time.Time, emailSent, telegramSent bool) error {
+	err := s.db.WithContext(ctx).Model(&entity.Pass{}).Where("id IN ?", ids).Updates(map[string]interface{}{
+		"status":        entity.PassStatusSent,
+		"sent_at":       sentAt,
+		"email_sent":    emailSent,
+		"telegram_sent": telegramSent,
+		"updated_at":    time.Now(),
+	}).Error
+	return err
+}
+
 // CreateBulkPasses is a function that creates multiple passes in bulk.
 func (s *PassStorage) CreateBulkPasses(ctx context.Context, passes []entity.Pass) error {
 	err := s.db.WithContext(ctx).Create(&passes).Error

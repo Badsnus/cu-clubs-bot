@@ -290,7 +290,6 @@ func (s *serviceProvider) PassService() *service.PassService {
 
 		s.passService = service.NewPassService(
 			s.Bot().Bot,
-			s.Bot().Layout,
 			botLogger,
 			s.PassStorage(),
 			s.EventStorage(),

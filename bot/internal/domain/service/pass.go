@@ -7,14 +7,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/robfig/cron/v3"
-	"github.com/xuri/excelize/v2"
-	tele "gopkg.in/telebot.v3"
-	"gopkg.in/telebot.v3/layout"
-
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/entity"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/utils/location"
 	"github.com/Badsnus/cu-clubs-bot/bot/pkg/logger/types"
+	"github.com/robfig/cron/v3"
+	"github.com/xuri/excelize/v2"
+	tele "gopkg.in/telebot.v3"
 )
 
 /*
@@ -44,6 +42,7 @@ type PassStorage interface {
 	GetPassesByUserID(ctx context.Context, userID int64, limit, offset int) ([]entity.Pass, error)
 	GetPendingPassesForSchedule(ctx context.Context, before time.Time) ([]entity.Pass, error)
 	MarkPassAsSent(ctx context.Context, id string, sentAt time.Time, emailSent, telegramSent bool) error
+	MarkPassesAsSent(ctx context.Context, ids []string, sentAt time.Time, emailSent, telegramSent bool) error
 	CreateBulkPasses(ctx context.Context, passes []entity.Pass) error
 
 	GetActivePassForUser(ctx context.Context, eventID string, userID int64) (*entity.Pass, error)
@@ -79,7 +78,6 @@ type EventWithPasses struct {
 
 type PassService struct {
 	bot    *tele.Bot
-	layout *layout.Layout
 	logger *types.Logger
 
 	passStorage  PassStorage
@@ -95,7 +93,6 @@ type PassService struct {
 
 func NewPassService(
 	bot *tele.Bot,
-	layout *layout.Layout,
 	logger *types.Logger,
 	passStorage PassStorage,
 	eventStorage PassEventStorage,
@@ -107,7 +104,6 @@ func NewPassService(
 ) *PassService {
 	ps := &PassService{
 		bot:              bot,
-		layout:           layout,
 		logger:           logger,
 		passStorage:      passStorage,
 		eventStorage:     eventStorage,
@@ -408,11 +404,15 @@ func (s *PassService) processPendingPasses(ctx context.Context, configName strin
 	// Помечаем пропуски как отправленные только если они есть
 	if len(pendingPasses) > 0 {
 		sentAt := time.Now()
+		var passIDs []string
 		for _, eventWithPasses := range eventsWithPasses {
 			for _, pass := range eventWithPasses.Passes {
-				if err := s.passStorage.MarkPassAsSent(ctx, pass.ID, sentAt, len(config.EmailRecipients) > 0, config.TelegramChatID != 0); err != nil {
-					s.logger.Error("Failed to mark pass as sent", "passID", pass.ID, "error", err)
-				}
+				passIDs = append(passIDs, pass.ID)
+			}
+		}
+		if len(passIDs) > 0 {
+			if err := s.passStorage.MarkPassesAsSent(ctx, passIDs, sentAt, len(config.EmailRecipients) > 0, config.TelegramChatID != 0); err != nil {
+				s.logger.Error("Failed to mark passes as sent", "error", err)
 			}
 		}
 	}
