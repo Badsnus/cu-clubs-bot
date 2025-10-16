@@ -69,7 +69,7 @@ type PassClubStorage interface {
 }
 
 type PassSMTPClient interface {
-	Send(to string, body, message string, subject string, file *bytes.Buffer)
+	Send(to string, body, message string, subject string, file *bytes.Buffer) error
 }
 
 type EventWithPasses struct {
@@ -396,13 +396,12 @@ func (s *PassService) processPendingPasses(ctx context.Context, configName strin
 		eventsWithPasses = s.groupPassesByEvent(ctx, pendingPasses)
 	}
 
-	// Всегда отправляем уведомление, даже если пропусков нет
-	if err := s.sendConsolidatedPassNotification(ctx, eventsWithPasses, config); err != nil {
+	telegramSent, emailSent, err := s.sendConsolidatedPassNotification(ctx, eventsWithPasses, config)
+	if err != nil {
 		s.logger.Error("Failed to send consolidated notification", "error", err)
 		return
 	}
 
-	// Помечаем пропуски как отправленные только если они есть
 	if len(pendingPasses) > 0 {
 		sentAt := time.Now()
 		var passIDs []string
@@ -412,7 +411,7 @@ func (s *PassService) processPendingPasses(ctx context.Context, configName strin
 			}
 		}
 		if len(passIDs) > 0 {
-			if err := s.passStorage.MarkPassesAsSent(ctx, passIDs, sentAt, len(config.EmailRecipients) > 0, config.TelegramChatID != 0); err != nil {
+			if err := s.passStorage.MarkPassesAsSent(ctx, passIDs, sentAt, emailSent, telegramSent); err != nil {
 				s.logger.Error("Failed to mark passes as sent", "error", err)
 			}
 		}
@@ -454,7 +453,7 @@ func (s *PassService) groupPassesByEvent(ctx context.Context, passes []entity.Pa
 	return result
 }
 
-func (s *PassService) sendConsolidatedPassNotification(ctx context.Context, eventsWithPasses []EventWithPasses, config *PassConfig) error {
+func (s *PassService) sendConsolidatedPassNotification(ctx context.Context, eventsWithPasses []EventWithPasses, config *PassConfig) (telegramSent bool, emailSent bool, err error) {
 	totalPasses := 0
 	for _, eventWithPasses := range eventsWithPasses {
 		totalPasses += len(eventWithPasses.Passes)
@@ -462,26 +461,28 @@ func (s *PassService) sendConsolidatedPassNotification(ctx context.Context, even
 
 	message := s.formatConsolidatedPassMessage(eventsWithPasses, totalPasses)
 
-	// Генерируем Excel только если есть пропуски
 	var consolidatedExcel *bytes.Buffer
-	var err error
 	if totalPasses > 0 {
 		consolidatedExcel, err = s.generateConsolidatedPassExcel(ctx, eventsWithPasses)
 		if err != nil {
 			s.logger.Error("Failed to generate consolidated Excel file", "error", err)
+			return false, false, err
 		}
 	} else {
-		// Создаём пустую таблицу с заголовками
 		consolidatedExcel, err = s.generateEmptyPassExcel()
 		if err != nil {
 			s.logger.Error("Failed to generate empty Excel file", "error", err)
+			return false, false, err
 		}
 	}
 
 	if config.TelegramChatID != 0 {
 		buf := bytes.NewBuffer(consolidatedExcel.Bytes())
-		if err := s.sendTelegramNotification(config.TelegramChatID, message, buf); err != nil {
-			s.logger.Error("Failed to send consolidated Telegram notification", "error", err)
+		if sendErr := s.sendTelegramNotification(config.TelegramChatID, message, buf); sendErr != nil {
+			s.logger.Error("Failed to send consolidated Telegram notification", "error", sendErr)
+			telegramSent = false
+		} else {
+			telegramSent = true
 		}
 	}
 
@@ -489,13 +490,17 @@ func (s *PassService) sendConsolidatedPassNotification(ctx context.Context, even
 		subject := fmt.Sprintf("Сводка пропусков - %d событий (%d пропусков)",
 			len(eventsWithPasses), totalPasses)
 
+		emailSent = true
 		for _, email := range config.EmailRecipients {
 			buf := bytes.NewBuffer(consolidatedExcel.Bytes())
-			s.smtpClient.Send(email, message, message, subject, buf)
+			if sendErr := s.smtpClient.Send(email, message, message, subject, buf); sendErr != nil {
+				s.logger.Error("Failed to send email", "email", email, "error", sendErr)
+				emailSent = false
+			}
 		}
 	}
 
-	return nil
+	return telegramSent, emailSent, nil
 }
 
 func (s *PassService) formatConsolidatedPassMessage(eventsWithPasses []EventWithPasses, totalPasses int) string {

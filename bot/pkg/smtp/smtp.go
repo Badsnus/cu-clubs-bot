@@ -32,7 +32,7 @@ func NewClient(dialer *gomail.Dialer, domain string, from string) *Client {
 }
 
 // Send отправляет письмо.
-func (c *Client) Send(to string, body, message string, subject string, file *bytes.Buffer) {
+func (c *Client) Send(to string, body, message string, subject string, file *bytes.Buffer) error {
 	msg := gomail.NewMessage()
 
 	msg.SetHeader("Message-ID", generateMessageID(c.domain))
@@ -55,10 +55,11 @@ func (c *Client) Send(to string, body, message string, subject string, file *byt
 
 	if err := c.dialer.DialAndSend(msg); err != nil {
 		logger.Log.Error(err)
-		return
+		return err
 	}
 
 	logger.Log.Info("Email successfully sent")
+	return nil
 }
 
 func generateMessageID(domain string) string {
