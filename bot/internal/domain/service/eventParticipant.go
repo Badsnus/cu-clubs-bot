@@ -2,7 +2,10 @@ package service
 
 import (
 	"context"
+	"errors"
 	"time"
+
+	"gorm.io/gorm"
 
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/dto"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/entity"
@@ -207,7 +210,11 @@ func (s *EventParticipantService) MarkAsVisited(ctx context.Context, eventID str
 func (s *EventParticipantService) IsUserRegistered(ctx context.Context, eventID string, userID int64) (bool, error) {
 	_, err := s.storage.Get(ctx, eventID, userID)
 	if err != nil {
-		return false, nil
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return false, nil
+		}
+		s.logger.Errorf("failed to check user registration for event %s, user %d: %v", eventID, userID, err)
+		return false, err
 	}
 	return true, nil
 }

@@ -88,8 +88,9 @@ type PassService struct {
 	clubStorage  PassClubStorage
 	smtpClient   PassSMTPClient
 
-	cron    *cron.Cron
-	configs map[string]*PassConfig
+	cron             *cron.Cron
+	configs          map[string]*PassConfig
+	schedulerStarted bool
 }
 
 func NewPassService(
@@ -105,16 +106,17 @@ func NewPassService(
 	telegramChatID int64,
 ) *PassService {
 	ps := &PassService{
-		bot:          bot,
-		layout:       layout,
-		logger:       logger,
-		passStorage:  passStorage,
-		eventStorage: eventStorage,
-		userStorage:  userStorage,
-		clubStorage:  clubStorage,
-		smtpClient:   smtpClient,
-		cron:         cron.New(cron.WithLocation(location.Location())),
-		configs:      make(map[string]*PassConfig),
+		bot:              bot,
+		layout:           layout,
+		logger:           logger,
+		passStorage:      passStorage,
+		eventStorage:     eventStorage,
+		userStorage:      userStorage,
+		clubStorage:      clubStorage,
+		smtpClient:       smtpClient,
+		cron:             cron.New(cron.WithLocation(location.Location())),
+		configs:          make(map[string]*PassConfig),
+		schedulerStarted: false,
 	}
 
 	weekdayConfig := &PassConfig{
@@ -355,6 +357,7 @@ func (s *PassService) StartScheduler() error {
 	}
 
 	s.cron.Start()
+	s.schedulerStarted = true
 	entries := s.cron.Entries()
 	s.logger.Infof("Pass scheduler started with %d jobs", len(entries))
 	for i, entry := range entries {
@@ -366,6 +369,7 @@ func (s *PassService) StartScheduler() error {
 func (s *PassService) StopScheduler() {
 	if s.cron != nil {
 		s.cron.Stop()
+		s.schedulerStarted = false
 		s.logger.Info("Pass scheduler stopped")
 	}
 }
@@ -640,14 +644,6 @@ func (s *PassService) generateEmptyPassExcel() (*bytes.Buffer, error) {
 	return &buf, nil
 }
 
-func (s *PassService) IsPassRequiredForEvent(ctx context.Context, eventID string) (bool, error) {
-	passes, err := s.passStorage.GetPassesByEventID(ctx, eventID)
-	if err != nil {
-		return false, err
-	}
-	return len(passes) > 0, nil
-}
-
 func (s *PassService) GetPassStatisticsForEvent(ctx context.Context, eventID string) (map[string]int, error) {
 	passes, err := s.passStorage.GetPassesByEventID(ctx, eventID)
 	if err != nil {
@@ -676,7 +672,7 @@ func (s *PassService) GetPassStatisticsForEvent(ctx context.Context, eventID str
 }
 
 func (s *PassService) GetSchedulerStatus() bool {
-	return s.cron != nil
+	return s.schedulerStarted
 }
 
 func (s *PassService) GetSchedulerInfo() map[string]any {

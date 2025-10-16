@@ -22,7 +22,7 @@ bot:
   qr:
     channel-id: -10000000000
   pass:
-    channel-id: -10000000000
+    channel-id: -1000000000
   avatar:
     channel-id: -10000000000
   intro:
@@ -37,7 +37,7 @@ settings:
         emails:
             - firstemail@domain.ru
 
-        # id телеграмм канала для отправки пропусков
+        # id телеграм-канала для отправки пропусков
         channel-id: -10000000000
 
         # Роли пользователей, которым НЕ отправляются пропуски
