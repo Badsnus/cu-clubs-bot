@@ -15,7 +15,6 @@ import (
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/database/postgres"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/service"
 	"github.com/Badsnus/cu-clubs-bot/bot/pkg/logger"
-	"github.com/Badsnus/cu-clubs-bot/bot/pkg/smtp"
 )
 
 func Setup(b *bot.Bot) {
@@ -33,20 +32,8 @@ func Setup(b *bot.Bot) {
 		postgres.NewNotificationStorage(b.DB),
 		nil,
 	)
-	eventParticipantService := service.NewEventParticipantService(
-		b.Bot,
-		b.Layout,
-		b.Logger,
-		postgres.NewEventParticipantStorage(b.DB),
-		postgres.NewEventStorage(b.DB),
-		postgres.NewUserStorage(b.DB),
-		postgres.NewClubStorage(b.DB),
-		smtp.NewClient(b.SMTPDialer, viper.GetString("service.smtp.domain"), viper.GetString("service.smtp.email")),
-		viper.GetStringSlice("settings.pass-emails"),
-		viper.GetInt64("bot.pass.channel-id"),
-	)
+
 	notifyService.StartNotifyScheduler()
-	eventParticipantService.StartPassScheduler()
 
 	// Pre-setup and global middlewares
 	middle := middlewares.New(b)

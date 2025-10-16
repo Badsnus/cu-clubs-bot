@@ -1,23 +1,15 @@
 package service
 
 import (
-	"bytes"
 	"context"
-	"fmt"
-	"strconv"
-	"strings"
+	"errors"
 	"time"
 
-	"github.com/robfig/cron/v3"
-	"github.com/xuri/excelize/v2"
-	tele "gopkg.in/telebot.v3"
-	"gopkg.in/telebot.v3/layout"
+	"gorm.io/gorm"
 
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/dto"
-	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/utils/location"
-	"github.com/Badsnus/cu-clubs-bot/bot/pkg/logger/types"
-
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/entity"
+	"github.com/Badsnus/cu-clubs-bot/bot/pkg/logger/types"
 )
 
 type EventParticipantStorage interface {
@@ -32,70 +24,125 @@ type EventParticipantStorage interface {
 	CountUserEvents(ctx context.Context, userID int64) (int64, error)
 }
 
-type eventParticipantEventStorage interface {
-	GetUpcomingEvents(ctx context.Context, before time.Time) ([]entity.Event, error)
+type EventParticipantEventStorage interface {
+	GetEventByID(ctx context.Context, eventID string) (*entity.Event, error)
 }
 
-type userStorage interface {
-	GetManyUsersByEventIDs(ctx context.Context, eventIDs []string) ([]entity.User, error)
+type EventParticipantPassStorage interface {
+	CreatePass(ctx context.Context, pass *entity.Pass) (*entity.Pass, error)
+	HasActivePass(ctx context.Context, eventID string, userID int64) (bool, error)
+	CancelPassesByEventAndUser(ctx context.Context, eventID string, userID int64) error
 }
 
-type eventParticipantSMTPClient interface {
-	Send(to string, body, message string, subject string, file *bytes.Buffer)
+type EventParticipantUserStorage interface {
+	GetUserByID(ctx context.Context, userID int64) (*entity.User, error)
 }
 
-type clubStorage interface {
-	GetManyByIDs(ctx context.Context, clubIDs []string) ([]entity.Club, error)
-}
-
+/*
+EventParticipantService - сервис для управления участниками событий.
+Основные функции:
+- Регистрация пользователей на события
+- Автоматическое создание пропусков при регистрации на события, требующие пропуск
+- Управление статусом посещения через QR-коды
+- Статистика участников и их активности
+*/
 type EventParticipantService struct {
-	bot    *tele.Bot
-	layout *layout.Layout
-	logger *types.Logger
-
-	storage                    EventParticipantStorage
-	eventStorage               eventParticipantEventStorage
-	userStorage                userStorage
-	clubStorage                clubStorage
-	eventParticipantSMTPClient eventParticipantSMTPClient
-
-	passEmails []string
-	passChatID int64
+	logger        *types.Logger
+	storage       EventParticipantStorage
+	eventStorage  EventParticipantEventStorage
+	passStorage   EventParticipantPassStorage
+	userStorage   EventParticipantUserStorage
+	excludedRoles []string
 }
 
 func NewEventParticipantService(
-	bot *tele.Bot,
-	layout *layout.Layout,
 	logger *types.Logger,
 	storage EventParticipantStorage,
-	eventStorage eventParticipantEventStorage,
-	userStorage userStorage,
-	clubStorage clubStorage,
-	eventParticipantSMTPClient eventParticipantSMTPClient,
-	passEmails []string,
-	passChatID int64,
+	eventStorage EventParticipantEventStorage,
+	passStorage EventParticipantPassStorage,
+	userStorage EventParticipantUserStorage,
+	excludedRoles []string,
 ) *EventParticipantService {
 	return &EventParticipantService{
-		bot:    bot,
-		layout: layout,
-		logger: logger,
-
-		storage:                    storage,
-		eventStorage:               eventStorage,
-		userStorage:                userStorage,
-		clubStorage:                clubStorage,
-		eventParticipantSMTPClient: eventParticipantSMTPClient,
-
-		passEmails: passEmails,
-		passChatID: passChatID,
+		logger:        logger,
+		storage:       storage,
+		eventStorage:  eventStorage,
+		passStorage:   passStorage,
+		userStorage:   userStorage,
+		excludedRoles: excludedRoles,
 	}
 }
 
 func (s *EventParticipantService) Register(ctx context.Context, eventID string, userID int64) (*entity.EventParticipant, error) {
-	return s.storage.Create(ctx, &entity.EventParticipant{
+	s.logger.Debugf("Registering user %d for event %s", userID, eventID)
+
+	participant, err := s.storage.Create(ctx, &entity.EventParticipant{
 		UserID:  userID,
 		EventID: eventID,
 	})
+	if err != nil {
+		s.logger.Errorf("Failed to register user %d for event %s: %v", userID, eventID, err)
+		return nil, err
+	}
+
+	if err := s.createPassIfRequired(ctx, eventID, userID); err != nil {
+		s.logger.Errorf("Failed to create pass for user %d, event %s: %v", userID, eventID, err)
+	}
+
+	s.logger.Debugf("Successfully registered user %d for event %s", userID, eventID)
+	return participant, nil
+}
+
+func (s *EventParticipantService) createPassIfRequired(ctx context.Context, eventID string, userID int64) error {
+	event, err := s.eventStorage.GetEventByID(ctx, eventID)
+	if err != nil {
+		return err
+	}
+
+	user, err := s.userStorage.GetUserByID(ctx, userID)
+	if err != nil {
+		return err
+	}
+
+	if !event.IsPassRequiredForUser(user, s.excludedRoles) {
+		s.logger.Debugf("Pass not required for user %d, event %s", userID, eventID)
+		return nil
+	}
+
+	hasActive, err := s.passStorage.HasActivePass(ctx, eventID, userID)
+	if err != nil {
+		s.logger.Errorf("Failed to check active pass for user %d, event %s: %v", userID, eventID, err)
+		return err
+	}
+
+	if hasActive {
+		s.logger.Debugf("Active pass already exists for user %d, event %s - skipping creation", userID, eventID)
+		return nil
+	}
+
+	scheduledAt := event.StartTime.Add(-24 * time.Hour)
+	if event.StartTime.Weekday() == time.Saturday || event.StartTime.Weekday() == time.Sunday {
+		scheduledAt = event.StartTime.Add(-48 * time.Hour)
+	}
+
+	pass := &entity.Pass{
+		EventID:     eventID,
+		UserID:      userID,
+		Type:        entity.PassTypeEvent,
+		Status:      entity.PassStatusPending,
+		ScheduledAt: scheduledAt,
+		Reason:      "registration",
+	}
+	pass.SetRequester(entity.PassRequesterTypeUser, userID)
+
+	_, err = s.passStorage.CreatePass(ctx, pass)
+	if err != nil {
+		s.logger.Errorf("Failed to create pass for user %d, event %s: %v", userID, eventID, err)
+		return err
+	}
+
+	s.logger.Debugf("Created pass for user %d, event %s (scheduled at: %s)", userID, eventID, scheduledAt.Format("2006-01-02 15:04:05"))
+	return nil
 }
 
 func (s *EventParticipantService) Get(ctx context.Context, eventID string, userID int64) (*entity.EventParticipant, error) {
@@ -103,11 +150,26 @@ func (s *EventParticipantService) Get(ctx context.Context, eventID string, userI
 }
 
 func (s *EventParticipantService) Update(ctx context.Context, eventParticipant *entity.EventParticipant) (*entity.EventParticipant, error) {
-	return s.storage.Update(ctx, eventParticipant)
+	participant, err := s.storage.Update(ctx, eventParticipant)
+	if err != nil {
+		s.logger.Errorf("Failed to update participant: %v", err)
+		return nil, err
+	}
+	return participant, nil
 }
 
 func (s *EventParticipantService) Delete(ctx context.Context, eventID string, userID int64) error {
-	return s.storage.Delete(ctx, eventID, userID)
+	if err := s.passStorage.CancelPassesByEventAndUser(ctx, eventID, userID); err != nil {
+		s.logger.Errorf("Failed to cancel passes for user %d, event %s: %v", userID, eventID, err)
+	}
+
+	err := s.storage.Delete(ctx, eventID, userID)
+	if err != nil {
+		s.logger.Errorf("Failed to remove user %d from event %s: %v", userID, eventID, err)
+		return err
+	}
+
+	return nil
 }
 
 func (s *EventParticipantService) GetByEventID(ctx context.Context, eventID string) ([]entity.EventParticipant, error) {
@@ -132,150 +194,74 @@ func (s *EventParticipantService) CountUserEvents(ctx context.Context, userID in
 	return s.storage.CountUserEvents(ctx, userID)
 }
 
-func (s *EventParticipantService) StartPassScheduler() {
-	s.logger.Info("Starting pass scheduler")
-	go func() {
-		c := cron.New(cron.WithLocation(location.Location()))
-		if _, err := c.AddFunc("1 16 * * 1-5", func() {
-			ctx := context.Background()
-			s.checkAndSend(ctx)
-		}); err != nil {
-			s.logger.Error("Failed to start pass scheduler:", err)
-			return
-		}
+func (s *EventParticipantService) MarkAsVisited(ctx context.Context, eventID string, userID int64, isUserQR, isEventQR bool) error {
+	participant, err := s.storage.Get(ctx, eventID, userID)
+	if err != nil {
+		return err
+	}
 
-		if _, err := c.AddFunc("1 12 * * 6", func() {
-			ctx := context.Background()
-			s.checkAndSend(ctx)
-		}); err != nil {
-			s.logger.Error("Failed to start pass scheduler:", err)
-			return
-		}
-		c.Start()
+	participant.IsUserQr = isUserQR
+	participant.IsEventQr = isEventQR
 
-		select {}
-	}()
+	_, err = s.storage.Update(ctx, participant)
+	return err
 }
 
-func (s *EventParticipantService) checkAndSend(ctx context.Context) {
-	s.logger.Debugf("Checking for events starting in the next 25 hours")
-	now := time.Now().In(location.Location())
-
-	events, err := s.eventStorage.GetUpcomingEvents(ctx, now.Add(72*time.Hour))
+func (s *EventParticipantService) IsUserRegistered(ctx context.Context, eventID string, userID int64) (bool, error) {
+	_, err := s.storage.Get(ctx, eventID, userID)
 	if err != nil {
-		s.logger.Errorf("failed to get upcoming events: %v", err)
-		return
-	}
-
-	var eventIDs []string
-	var clubsIDs []string
-	var eventStartDate time.Time
-
-	for _, event := range events {
-		eventStartTime := event.StartTime.In(location.Location())
-		weekday := eventStartTime.Weekday()
-
-		// Determine notification time
-		var notificationTime time.Time
-		switch weekday {
-		case time.Sunday:
-			notificationTime = time.Date(eventStartTime.Year(), eventStartTime.Month(), eventStartTime.Day()-1, 12, 0, 0, 0, location.Location())
-		case time.Monday:
-			notificationTime = time.Date(eventStartTime.Year(), eventStartTime.Month(), eventStartTime.Day()-2, 12, 0, 0, 0, location.Location())
-		default:
-			notificationTime = time.Date(eventStartTime.Year(), eventStartTime.Month(), eventStartTime.Day(), 0, 0, 0, 0, eventStartTime.Location()).Add(-24 * time.Hour).Add(16 * time.Hour)
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return false, nil
 		}
-
-		// Check if it's valid event for notification and it's time to send the notification
-		if (strings.Contains(event.Location, "Гашека 7")) && (!now.Before(notificationTime) && !now.After(notificationTime.Add(1*time.Hour))) {
-			eventIDs = append(eventIDs, event.ID)
-			clubsIDs = append(clubsIDs, event.ClubID)
-			eventStartDate = event.StartTime.In(location.Location())
-		}
+		s.logger.Errorf("failed to check user registration for event %s, user %d: %v", eventID, userID, err)
+		return false, err
 	}
-
-	var participants []entity.User
-	participants, err = s.userStorage.GetManyUsersByEventIDs(ctx, eventIDs)
-	if err != nil {
-		s.logger.Errorf("failed to get participants for events %s: %v", eventIDs, err)
-		return
-	}
-
-	var participantsWithoutStudents []entity.User
-	for _, participant := range participants {
-		if participant.Role != entity.Student {
-			participantsWithoutStudents = append(participantsWithoutStudents, participant)
-		}
-	}
-	if len(participantsWithoutStudents) == 0 {
-		return
-	}
-
-	clubs, err := s.clubStorage.GetManyByIDs(context.Background(), clubsIDs)
-	if err != nil {
-		s.logger.Errorf("failed to get clubs: %v", err)
-		return
-	}
-	clubsName := make([]string, len(clubs))
-	for i, club := range clubs {
-		clubsName[i] = club.Name
-	}
-	clubsNameStr := strings.Join(clubsName, ", ")
-
-	var buf *bytes.Buffer
-	buf, err = participantsToXLSX(participants)
-	if err != nil {
-		s.logger.Errorf("failed to form xlsx with participants %s: %v", eventIDs, err)
-		return
-	}
-
-	message := fmt.Sprintf("Внешние гости_%s_%s", clubsNameStr, eventStartDate.Format("02.01.2006"))
-
-	for _, passEmail := range s.passEmails {
-		s.eventParticipantSMTPClient.Send(passEmail, message, message, message, buf)
-	}
-
-	chat, errGetChat := s.bot.ChatByID(s.passChatID)
-	if errGetChat != nil {
-		s.logger.Errorf("failed to get chat %d: %v", s.passChatID, errGetChat)
-		return
-	}
-
-	file := &tele.Document{
-		File:     tele.FromReader(buf),
-		Caption:  s.layout.TextLocale("ru", "pass_users"),
-		FileName: "users.xlsx",
-	}
-	_, errSend := s.bot.Send(chat, file)
-	if errSend != nil {
-		s.logger.Errorf("failed to send notification to chat %d: %v", s.passChatID, errSend)
-		return
-	}
+	return true, nil
 }
 
-func participantsToXLSX(users []entity.User) (*bytes.Buffer, error) {
-	f := excelize.NewFile()
+func (s *EventParticipantService) BulkRegister(ctx context.Context, eventID string, userIDs []int64) ([]entity.EventParticipant, error) {
+	var participants []entity.EventParticipant
 
-	sheet := "Sheet1"
-	_ = f.SetCellValue(sheet, "A1", "Фамилия")
-	_ = f.SetCellValue(sheet, "B1", "Имя")
-	_ = f.SetCellValue(sheet, "C1", "Отчество")
-	for i, user := range users {
-		fio := strings.Split(user.FIO, " ")
-		if len(fio) != 3 {
+	for _, userID := range userIDs {
+		participant, err := s.Register(ctx, eventID, userID)
+		if err != nil {
+			s.logger.Errorf("Failed to register user %d for event %s: %v", userID, eventID, err)
 			continue
 		}
-
-		row := i + 2
-		_ = f.SetCellValue(sheet, "A"+strconv.Itoa(row), fio[0])
-		_ = f.SetCellValue(sheet, "B"+strconv.Itoa(row), fio[1])
-		_ = f.SetCellValue(sheet, "C"+strconv.Itoa(row), fio[2])
+		participants = append(participants, *participant)
 	}
 
-	var buf bytes.Buffer
-	if err := f.Write(&buf); err != nil {
+	return participants, nil
+}
+
+func (s *EventParticipantService) GetVisitedParticipants(ctx context.Context, eventID string) ([]entity.EventParticipant, error) {
+	allParticipants, err := s.storage.GetByEventID(ctx, eventID)
+	if err != nil {
 		return nil, err
 	}
 
-	return &buf, nil
+	var visitedParticipants []entity.EventParticipant
+	for _, participant := range allParticipants {
+		if participant.IsUserQr || participant.IsEventQr {
+			visitedParticipants = append(visitedParticipants, participant)
+		}
+	}
+
+	return visitedParticipants, nil
+}
+
+func (s *EventParticipantService) GetNotVisitedParticipants(ctx context.Context, eventID string) ([]entity.EventParticipant, error) {
+	allParticipants, err := s.storage.GetByEventID(ctx, eventID)
+	if err != nil {
+		return nil, err
+	}
+
+	var notVisitedParticipants []entity.EventParticipant
+	for _, participant := range allParticipants {
+		if !participant.IsUserQr && !participant.IsEventQr {
+			notVisitedParticipants = append(notVisitedParticipants, participant)
+		}
+	}
+
+	return notVisitedParticipants, nil
 }

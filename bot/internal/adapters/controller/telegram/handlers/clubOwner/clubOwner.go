@@ -106,6 +106,7 @@ func NewHandler(b *bot.Bot) *Handler {
 	userStorage := postgres.NewUserStorage(b.DB)
 	eventStorage := postgres.NewEventStorage(b.DB)
 	eventParticipantStorage := postgres.NewEventParticipantStorage(b.DB)
+	passStorage := postgres.NewPassStorage(b.DB)
 
 	eventSrvc := service.NewEventService(eventStorage)
 
@@ -133,7 +134,7 @@ func NewHandler(b *bot.Bot) *Handler {
 		clubOwnerService:        service.NewClubOwnerService(clubOwnerStorage, userStorage),
 		userService:             service.NewUserService(userStorage, nil, nil, ""),
 		eventService:            eventSrvc,
-		eventParticipantService: service.NewEventParticipantService(nil, nil, nil, eventParticipantStorage, nil, nil, nil, nil, nil, 0),
+		eventParticipantService: service.NewEventParticipantService(b.Logger, eventParticipantStorage, eventStorage, passStorage, userStorage, viper.GetStringSlice("settings.pass.excluded-roles")),
 		qrService:               qrSrvc,
 		notificationService: service.NewNotifyService(
 			b.Bot,
@@ -1650,6 +1651,17 @@ func (h Handler) createEvent(c tele.Context) error {
 	eventMaxParticipants, _ = strconv.Atoi(*steps[7].result)
 	eventMaxExpectedParticipants, _ = strconv.Atoi(*steps[8].result)
 
+	locationSubstrings := viper.GetStringSlice("settings.pass.location-substrings")
+	passRequired := len(locationSubstrings) == 0
+	if !passRequired {
+		for _, substring := range locationSubstrings {
+			if strings.Contains(strings.ToLower(*steps[2].result), strings.ToLower(substring)) {
+				passRequired = true
+				break
+			}
+		}
+	}
+
 	event := entity.Event{
 		ClubID:                club.ID,
 		Name:                  *steps[0].result,
@@ -1661,6 +1673,7 @@ func (h Handler) createEvent(c tele.Context) error {
 		AfterRegistrationText: eventAfterRegistrationText,
 		MaxParticipants:       eventMaxParticipants,
 		ExpectedParticipants:  eventMaxExpectedParticipants,
+		PassRequired:          passRequired,
 	}
 	h.eventsStorage.Set(c.Sender().ID, event, 0)
 

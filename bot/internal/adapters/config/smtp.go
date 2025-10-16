@@ -24,12 +24,12 @@ type smtpConfig struct {
 
 func NewSMTPConfig() SMTPConfig {
 	return &smtpConfig{
-		host:     viper.GetString("service.smtp.host"),
-		port:     viper.GetInt("service.smtp.port"),
-		login:    viper.GetString("service.smtp.login"),
-		password: viper.GetString("service.smtp.pass"),
-		email:    viper.GetString("service.smtp.email"),
-		domain:   viper.GetString("service.smtp.domain"),
+		host:     viper.GetString("infrastructure.smtp.host"),
+		port:     viper.GetInt("infrastructure.smtp.port"),
+		login:    viper.GetString("infrastructure.smtp.login"),
+		password: viper.GetString("infrastructure.smtp.pass"),
+		email:    viper.GetString("infrastructure.smtp.email"),
+		domain:   viper.GetString("infrastructure.smtp.domain"),
 	}
 }
 

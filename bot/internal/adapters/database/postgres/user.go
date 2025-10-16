@@ -32,6 +32,13 @@ func (s *UserStorage) Get(ctx context.Context, id uint) (*entity.User, error) {
 	return &user, err
 }
 
+// GetUserByID is a function that gets a user from the database by id (int64 version).
+func (s *UserStorage) GetUserByID(ctx context.Context, userID int64) (*entity.User, error) {
+	var user entity.User
+	err := s.db.WithContext(ctx).Where("id = ?", userID).First(&user).Error
+	return &user, err
+}
+
 // GetByQRCodeID is a function that gets a user from the database by qr code id.
 func (s *UserStorage) GetByQRCodeID(ctx context.Context, qrCodeID string) (*entity.User, error) {
 	var user entity.User

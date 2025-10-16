@@ -35,6 +35,11 @@ func (s *EventStorage) Get(ctx context.Context, id string) (*entity.Event, error
 	return &event, err
 }
 
+// GetEventByID is an alias for Get method to maintain interface compatibility
+func (s *EventStorage) GetEventByID(ctx context.Context, eventID string) (*entity.Event, error) {
+	return s.Get(ctx, eventID)
+}
+
 func (s *EventStorage) GetByQRCodeID(ctx context.Context, qrCodeID string) (*entity.Event, error) {
 	var event entity.Event
 	err := s.db.WithContext(ctx).Where("qr_code_id = ?", qrCodeID).First(&event).Error

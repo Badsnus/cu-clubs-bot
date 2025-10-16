@@ -21,9 +21,9 @@ type redisConfig struct {
 
 func NewRedisConfig() RedisConfig {
 	return &redisConfig{
-		host:     viper.GetString("service.redis.host"),
-		port:     viper.GetString("service.redis.port"),
-		password: viper.GetString("service.redis.password"),
+		host:     viper.GetString("infrastructure.redis.host"),
+		port:     viper.GetString("infrastructure.redis.port"),
+		password: viper.GetString("infrastructure.redis.password"),
 	}
 }
 

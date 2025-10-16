@@ -32,7 +32,7 @@ type UserStorage interface {
 }
 
 type smtpClient interface {
-	Send(to string, body, message string, subject string, file *bytes.Buffer)
+	Send(to string, body, message string, subject string, file *bytes.Buffer) error
 }
 
 type eventParticipantStorage interface {
@@ -143,7 +143,9 @@ func (s *UserService) SendAuthCode(_ context.Context, email string, botUserName 
 		return "", err
 	}
 
-	s.smtpClient.Send(email, "Email confirmation", message, "Email confirmation", nil)
+	if err := s.smtpClient.Send(email, "Email confirmation", message, "Email confirmation", nil); err != nil {
+		return "", fmt.Errorf("failed to send email: %w", err)
+	}
 
 	return code, nil
 }

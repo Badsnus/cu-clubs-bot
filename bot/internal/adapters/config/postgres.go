@@ -22,12 +22,12 @@ type pgConfig struct {
 
 func NewPGConfig() PGConfig {
 	return &pgConfig{
-		host:     viper.GetString("service.database.host"),
-		user:     viper.GetString("service.database.user"),
-		password: viper.GetString("service.database.password"),
-		port:     viper.GetInt("service.database.port"),
-		dbName:   viper.GetString("service.database.name"),
-		sslMode:  viper.GetString("service.database.ssl-mode"),
+		host:     viper.GetString("infrastructure.database.host"),
+		user:     viper.GetString("infrastructure.database.user"),
+		password: viper.GetString("infrastructure.database.password"),
+		port:     viper.GetInt("infrastructure.database.port"),
+		dbName:   viper.GetString("infrastructure.database.name"),
+		sslMode:  viper.GetString("infrastructure.database.ssl-mode"),
 		timeZone: viper.GetString("settings.timezone"),
 	}
 }
