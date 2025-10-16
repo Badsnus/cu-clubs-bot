@@ -3,7 +3,6 @@ package service
 import (
 	"context"
 	"errors"
-	"time"
 
 	"gorm.io/gorm"
 
@@ -120,10 +119,7 @@ func (s *EventParticipantService) createPassIfRequired(ctx context.Context, even
 		return nil
 	}
 
-	scheduledAt := event.StartTime.Add(-24 * time.Hour)
-	if event.StartTime.Weekday() == time.Saturday || event.StartTime.Weekday() == time.Sunday {
-		scheduledAt = event.StartTime.Add(-48 * time.Hour)
-	}
+	scheduledAt := event.CalculateScheduledAt()
 
 	pass := &entity.Pass{
 		EventID:     eventID,
