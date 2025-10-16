@@ -275,7 +275,6 @@ func (s *serviceProvider) EventParticipantService() *service.EventParticipantSer
 			s.PassStorage(),
 			s.UserStorage(),
 			s.cfg.App.PassExcludedRoles(),
-			s.cfg.App.PassLocationSubstrings(),
 		)
 	}
 

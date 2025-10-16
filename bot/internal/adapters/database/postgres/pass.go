@@ -21,7 +21,7 @@ func NewPassStorage(db *gorm.DB) *PassStorage {
 
 // CreatePass is a function that creates a new pass in the database.
 func (s *PassStorage) CreatePass(ctx context.Context, pass *entity.Pass) (*entity.Pass, error) {
-	err := s.db.WithContext(ctx).Create(&pass).Error
+	err := s.db.WithContext(ctx).Create(pass).Error
 	return pass, err
 }
 

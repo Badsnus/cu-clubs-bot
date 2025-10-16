@@ -116,9 +116,9 @@ func New(b *bot.Bot) *Handler {
 
 	clubStorage := postgres.NewClubStorage(b.DB)
 
-	eventPartService := service.NewEventParticipantService(b.Logger, eventParticipantStorage, eventStorage, passStorage, userStorage, viper.GetStringSlice("settings.pass.excluded-roles"), viper.GetStringSlice("settings.pass.location-substrings"))
+	eventPartService := service.NewEventParticipantService(b.Logger, eventParticipantStorage, eventStorage, passStorage, userStorage, viper.GetStringSlice("settings.pass.excluded-roles"))
 
-	smtpClient := smtp.NewClient(b.SMTPDialer, viper.GetString("service.smtp.domain"), viper.GetString("service.smtp.email"))
+	smtpClient := smtp.NewClient(b.SMTPDialer, viper.GetString("infrastructure.smtp.domain"), viper.GetString("infrastructure.smtp.email"))
 
 	wd, _ := os.Getwd()
 	emailHTMLFilePath := filepath.Join(wd, viper.GetString("settings.html.email-confirmation"))

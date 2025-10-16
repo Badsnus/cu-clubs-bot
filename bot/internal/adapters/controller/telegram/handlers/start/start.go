@@ -122,7 +122,7 @@ func New(b *bot.Bot) *Handler {
 		userService:             userSrvc,
 		clubService:             service.NewClubService(b.Bot, clubStorage),
 		eventService:            eventSrvc,
-		eventParticipantService: service.NewEventParticipantService(b.Logger, eventParticipantStorage, eventStorage, passStorage, userStorage, viper.GetStringSlice("settings.pass.excluded-roles"), viper.GetStringSlice("settings.pass.location-substrings")),
+		eventParticipantService: service.NewEventParticipantService(b.Logger, eventParticipantStorage, eventStorage, passStorage, userStorage, viper.GetStringSlice("settings.pass.excluded-roles")),
 		qrService:               qrSrvc,
 		notificationService:     service.NewNotifyService(b.Bot, b.Layout, b.Logger, clubOwnerSrvc, eventStorage, notificationStorage, eventParticipantStorage),
 		callbacksStorage:        b.Redis.Callbacks,

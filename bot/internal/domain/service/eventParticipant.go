@@ -2,8 +2,6 @@ package service
 
 import (
 	"context"
-	"slices"
-	"strings"
 	"time"
 
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/dto"
@@ -46,13 +44,12 @@ EventParticipantService - сервис для управления участн�
 - Статистика участников и их активности
 */
 type EventParticipantService struct {
-	logger             *types.Logger
-	storage            EventParticipantStorage
-	eventStorage       EventParticipantEventStorage
-	passStorage        EventParticipantPassStorage
-	userStorage        EventParticipantUserStorage
-	excludedRoles      []string
-	locationSubstrings []string
+	logger        *types.Logger
+	storage       EventParticipantStorage
+	eventStorage  EventParticipantEventStorage
+	passStorage   EventParticipantPassStorage
+	userStorage   EventParticipantUserStorage
+	excludedRoles []string
 }
 
 func NewEventParticipantService(
@@ -62,16 +59,14 @@ func NewEventParticipantService(
 	passStorage EventParticipantPassStorage,
 	userStorage EventParticipantUserStorage,
 	excludedRoles []string,
-	locationSubstrings []string,
 ) *EventParticipantService {
 	return &EventParticipantService{
-		logger:             logger,
-		storage:            storage,
-		eventStorage:       eventStorage,
-		passStorage:        passStorage,
-		userStorage:        userStorage,
-		excludedRoles:      excludedRoles,
-		locationSubstrings: locationSubstrings,
+		logger:        logger,
+		storage:       storage,
+		eventStorage:  eventStorage,
+		passStorage:   passStorage,
+		userStorage:   userStorage,
+		excludedRoles: excludedRoles,
 	}
 }
 
@@ -106,7 +101,7 @@ func (s *EventParticipantService) createPassIfRequired(ctx context.Context, even
 		return err
 	}
 
-	if !s.isPassRequiredForEvent(event, user) {
+	if !event.IsPassRequiredForUser(user, s.excludedRoles) {
 		s.logger.Debugf("Pass not required for user %d, event %s", userID, eventID)
 		return nil
 	}
@@ -145,23 +140,6 @@ func (s *EventParticipantService) createPassIfRequired(ctx context.Context, even
 
 	s.logger.Debugf("Created pass for user %d, event %s (scheduled at: %s)", userID, eventID, scheduledAt.Format("2006-01-02 15:04:05"))
 	return nil
-}
-
-func (s *EventParticipantService) isPassRequiredForEvent(event *entity.Event, user *entity.User) bool {
-	if slices.Contains(s.excludedRoles, user.Role.String()) {
-		return false
-	}
-	if len(s.locationSubstrings) == 0 {
-		return true
-	}
-
-	for _, substring := range s.locationSubstrings {
-		if strings.Contains(strings.ToLower(event.Location), strings.ToLower(substring)) {
-			return true
-		}
-	}
-
-	return false
 }
 
 func (s *EventParticipantService) Get(ctx context.Context, eventID string, userID int64) (*entity.EventParticipant, error) {

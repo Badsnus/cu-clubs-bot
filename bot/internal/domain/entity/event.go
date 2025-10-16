@@ -2,6 +2,7 @@ package entity
 
 import (
 	"fmt"
+	"slices"
 	"time"
 
 	"github.com/lib/pq"
@@ -48,4 +49,17 @@ func (e *Event) IsOver(additionalTime time.Duration) bool {
 // The link can be used to open the event in the bot
 func (e *Event) Link(botName string) string {
 	return fmt.Sprintf("https://t.me/%s?start=event_%s", botName, e.ID)
+}
+
+// IsPassRequiredForUser checks if a pass is required for the given user
+func (e *Event) IsPassRequiredForUser(user *User, excludedRoles []string) bool {
+	if !e.PassRequired {
+		return false
+	}
+
+	if slices.Contains(excludedRoles, user.Role.String()) {
+		return false
+	}
+
+	return true
 }

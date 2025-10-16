@@ -61,6 +61,7 @@ type PassEventStorage interface {
 type PassUserStorage interface {
 	GetManyUsersByEventIDs(ctx context.Context, eventIDs []string) ([]entity.User, error)
 	GetUserByID(ctx context.Context, userID int64) (*entity.User, error)
+	GetMany(ctx context.Context, ids []int64) ([]entity.User, error)
 }
 
 type PassClubStorage interface {
@@ -473,7 +474,8 @@ func (s *PassService) sendConsolidatedPassNotification(ctx context.Context, even
 	}
 
 	if config.TelegramChatID != 0 {
-		if err := s.sendTelegramNotification(config.TelegramChatID, message, consolidatedExcel); err != nil {
+		buf := bytes.NewBuffer(consolidatedExcel.Bytes())
+		if err := s.sendTelegramNotification(config.TelegramChatID, message, buf); err != nil {
 			s.logger.Error("Failed to send consolidated Telegram notification", "error", err)
 		}
 	}
@@ -483,7 +485,8 @@ func (s *PassService) sendConsolidatedPassNotification(ctx context.Context, even
 			len(eventsWithPasses), totalPasses)
 
 		for _, email := range config.EmailRecipients {
-			s.smtpClient.Send(email, message, message, subject, consolidatedExcel)
+			buf := bytes.NewBuffer(consolidatedExcel.Bytes())
+			s.smtpClient.Send(email, message, message, subject, buf)
 		}
 	}
 
@@ -547,7 +550,7 @@ func (s *PassService) generateConsolidatedPassExcel(ctx context.Context, eventsW
 			userIDs = append(userIDs, pass.UserID)
 		}
 
-		users, err := s.getUsersByIDs(ctx, userIDs)
+		users, err := s.userStorage.GetMany(ctx, userIDs)
 		if err != nil {
 			s.logger.Error("Failed to get users for Excel", "error", err)
 			continue
@@ -590,19 +593,6 @@ func (s *PassService) generateConsolidatedPassExcel(ctx context.Context, eventsW
 	}
 
 	return &buf, nil
-}
-
-func (s *PassService) getUsersByIDs(ctx context.Context, userIDs []int64) ([]entity.User, error) {
-	var users []entity.User
-	for _, userID := range userIDs {
-		user, err := s.userStorage.GetUserByID(ctx, userID)
-		if err != nil {
-			s.logger.Error("Failed to get user", "userID", userID, "error", err)
-			continue
-		}
-		users = append(users, *user)
-	}
-	return users, nil
 }
 
 func (s *PassService) sendTelegramNotification(chatID int64, message string, file *bytes.Buffer) error {
