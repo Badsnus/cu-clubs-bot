@@ -36,7 +36,14 @@ type Handler struct {
 	input       *intele.InputManager
 }
 
-func New(userSvc userService, clubSvc clubService, b *tele.Bot, lt *layout.Layout, lg *types.Logger, in *intele.InputManager) *Handler {
+func New(
+	userSvc userService,
+	clubSvc clubService,
+	b *tele.Bot,
+	lt *layout.Layout,
+	lg *types.Logger,
+	in *intele.InputManager,
+) *Handler {
 	return &Handler{
 		bot:         b,
 		layout:      lt,

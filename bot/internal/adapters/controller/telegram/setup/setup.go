@@ -13,7 +13,17 @@ import (
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/controller/telegram/handlers/user"
 )
 
-func Setup(bot *bot.Bot, middle *middlewares.Handler, startHandler *start.Handler, userHandler *user.Handler, clubOwnerHandler *clubowner.Handler, menuHandler *menu.Handler, adminHandler *admin.Handler, debug bool, adminIDs []int64) {
+func Setup(
+	bot *bot.Bot,
+	middle *middlewares.Handler,
+	startHandler *start.Handler,
+	userHandler *user.Handler,
+	clubOwnerHandler *clubowner.Handler,
+	menuHandler *menu.Handler,
+	adminHandler *admin.Handler,
+	debug bool,
+	adminIDs []int64,
+) {
 	// Pre-setup and global middlewares
 	bot.Use(middle.PrivateChatOnly)
 	if debug {

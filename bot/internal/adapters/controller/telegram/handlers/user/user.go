@@ -106,7 +106,28 @@ type Handler struct {
 	resendTTL         time.Duration
 }
 
-func New(userSvc userService, eventSvc eventService, clubSvc clubService, eventParticipantSvc eventParticipantService, qrSvc qrService, notifySvc notificationService, menuHandler *menu.Handler, codesStorage *codes.Storage, emailsStorage *emails.Storage, eventsStorage *events.Storage, callbacksStorage callbacks.CallbackStorage, lt *layout.Layout, lg *types.Logger, in *intele.InputManager, grantChatID int64, timezone string, validEmailDomains []string, emailTTL time.Duration, authTTL time.Duration, resendTTL time.Duration) *Handler {
+func New(
+	userSvc userService,
+	eventSvc eventService,
+	clubSvc clubService,
+	eventParticipantSvc eventParticipantService,
+	qrSvc qrService,
+	notifySvc notificationService,
+	menuHandler *menu.Handler,
+	codesStorage *codes.Storage,
+	emailsStorage *emails.Storage,
+	eventsStorage *events.Storage,
+	callbacksStorage callbacks.CallbackStorage,
+	lt *layout.Layout,
+	lg *types.Logger,
+	in *intele.InputManager,
+	grantChatID int64,
+	timezone string,
+	validEmailDomains []string,
+	emailTTL time.Duration,
+	authTTL time.Duration,
+	resendTTL time.Duration,
+) *Handler {
 	return &Handler{
 		userService:             userSvc,
 		eventService:            eventSvc,

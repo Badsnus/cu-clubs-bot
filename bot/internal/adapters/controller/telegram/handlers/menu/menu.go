@@ -24,7 +24,12 @@ type Handler struct {
 	adminIDs []int64
 }
 
-func New(clubSvc clubService, lg *types.Logger, lt *layout.Layout, adminIDs []int64) *Handler {
+func New(
+	clubSvc clubService,
+	lg *types.Logger,
+	lt *layout.Layout,
+	adminIDs []int64,
+) *Handler {
 	return &Handler{
 		clubService: clubSvc,
 

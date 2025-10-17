@@ -57,7 +57,15 @@ type Handler struct {
 	clubOwnerService clubOwnerService
 }
 
-func New(userSvc adminUserService, clubSvc clubService, clubOwnerSvc clubOwnerService, b *tele.Bot, lt *layout.Layout, lg *types.Logger, in *intele.InputManager) *Handler {
+func New(
+	userSvc adminUserService,
+	clubSvc clubService,
+	clubOwnerSvc clubOwnerService,
+	b *tele.Bot,
+	lt *layout.Layout,
+	lg *types.Logger,
+	in *intele.InputManager,
+) *Handler {
 	return &Handler{
 		layout:           lt,
 		logger:           lg,

@@ -20,9 +20,6 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/controller/telegram/handlers/middlewares"
-	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/database/redis/callbacks"
-	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/database/redis/codes"
-	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/database/redis/emails"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/database/redis/events"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/common/errorz"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/dto"
@@ -99,7 +96,24 @@ type Handler struct {
 	passLocationSubstrings []string
 }
 
-func NewHandler(b *tele.Bot, lt *layout.Layout, lg *types.Logger, in *intele.InputManager, eventsStorage *events.Storage, clubSvc clubService, clubOwnerSvc clubOwnerService, userSvc userService, eventSvc eventService, eventParticipantSvc eventParticipantService, qrSvc qrService, notifySvc notificationService, callbacksStorage callbacks.CallbackStorage, codesStorage *codes.Storage, emailsStorage *emails.Storage, mailingChannelID int64, avatarChannelID int64, introChannelID int64, passLocationSubstrings []string) *Handler {
+func NewHandler(
+	b *tele.Bot,
+	lt *layout.Layout,
+	lg *types.Logger,
+	in *intele.InputManager,
+	eventsStorage *events.Storage,
+	clubSvc clubService,
+	clubOwnerSvc clubOwnerService,
+	userSvc userService,
+	eventSvc eventService,
+	eventParticipantSvc eventParticipantService,
+	qrSvc qrService,
+	notifySvc notificationService,
+	mailingChannelID int64,
+	avatarChannelID int64,
+	introChannelID int64,
+	passLocationSubstrings []string,
+) *Handler {
 	return &Handler{
 		bot:    b,
 		layout: lt,

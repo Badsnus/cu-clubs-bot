@@ -91,7 +91,23 @@ type Handler struct {
 	eventIDTTL    time.Duration
 }
 
-func New(userSvc userService, clubSvc clubService, eventSvc eventService, eventParticipantSvc eventParticipantService, qrSvc qrService, notifySvc notificationService, callbacksStorage callbacks.CallbackStorage, menuHandler *menu.Handler, codesStorage *codes.Storage, emailsStorage *emails.Storage, eventsStorage *events.Storage, lt *layout.Layout, lg *types.Logger, in *intele.InputManager, eventIDTTL time.Duration) *Handler {
+func New(
+	userSvc userService,
+	clubSvc clubService,
+	eventSvc eventService,
+	eventParticipantSvc eventParticipantService,
+	qrSvc qrService,
+	notifySvc notificationService,
+	callbacksStorage callbacks.CallbackStorage,
+	menuHandler *menu.Handler,
+	codesStorage *codes.Storage,
+	emailsStorage *emails.Storage,
+	eventsStorage *events.Storage,
+	lt *layout.Layout,
+	lg *types.Logger,
+	in *intele.InputManager,
+	eventIDTTL time.Duration,
+) *Handler {
 	return &Handler{
 		userService:             userSvc,
 		clubService:             clubSvc,
