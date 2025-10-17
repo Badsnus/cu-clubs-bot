@@ -6,25 +6,21 @@ import (
 	"strings"
 	"time"
 
+	"github.com/nlypage/intele"
 	"github.com/redis/go-redis/v9"
-	"github.com/spf13/viper"
-
-	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/database/redis/callbacks"
-	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/database/redis/events"
-	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/utils/banner"
-	qr "github.com/Badsnus/cu-clubs-bot/bot/pkg/qrcode"
 
 	tele "gopkg.in/telebot.v3"
 	"gopkg.in/telebot.v3/layout"
 	"gorm.io/gorm"
 
-	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/controller/telegram/bot"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/controller/telegram/handlers/menu"
-	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/database/postgres"
+	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/database/redis/callbacks"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/database/redis/codes"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/database/redis/emails"
+	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/database/redis/events"
+
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/entity"
-	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/service"
+	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/utils/banner"
 	"github.com/Badsnus/cu-clubs-bot/bot/pkg/logger/types"
 )
 
@@ -91,47 +87,27 @@ type Handler struct {
 	eventsStorage *events.Storage
 	layout        *layout.Layout
 	logger        *types.Logger
+	input         *intele.InputManager
+	eventIDTTL    time.Duration
 }
 
-func New(b *bot.Bot) *Handler {
-	userStorage := postgres.NewUserStorage(b.DB)
-	eventStorage := postgres.NewEventStorage(b.DB)
-	clubStorage := postgres.NewClubStorage(b.DB)
-	eventParticipantStorage := postgres.NewEventParticipantStorage(b.DB)
-	passStorage := postgres.NewPassStorage(b.DB)
-	clubOwnerStorage := postgres.NewClubOwnerStorage(b.DB)
-	notificationStorage := postgres.NewNotificationStorage(b.DB)
-
-	userSrvc := service.NewUserService(userStorage, nil, nil, "")
-	eventSrvc := service.NewEventService(eventStorage)
-	clubOwnerSrvc := service.NewClubOwnerService(clubOwnerStorage, userStorage)
-
-	qrSrvc, err := service.NewQrService(
-		b.Bot,
-		qr.CU,
-		userSrvc,
-		eventSrvc,
-		viper.GetInt64("bot.qr.channel-id"),
-		viper.GetString("settings.qr.logo-path"),
-	)
-	if err != nil {
-		b.Logger.Fatalf("failed to create qr service: %v", err)
-	}
-
+func New(userSvc userService, clubSvc clubService, eventSvc eventService, eventParticipantSvc eventParticipantService, qrSvc qrService, notifySvc notificationService, callbacksStorage callbacks.CallbackStorage, menuHandler *menu.Handler, codesStorage *codes.Storage, emailsStorage *emails.Storage, eventsStorage *events.Storage, lt *layout.Layout, lg *types.Logger, in *intele.InputManager, eventIDTTL time.Duration) *Handler {
 	return &Handler{
-		userService:             userSrvc,
-		clubService:             service.NewClubService(b.Bot, clubStorage),
-		eventService:            eventSrvc,
-		eventParticipantService: service.NewEventParticipantService(b.Logger, eventParticipantStorage, eventStorage, passStorage, userStorage, viper.GetStringSlice("settings.pass.excluded-roles")),
-		qrService:               qrSrvc,
-		notificationService:     service.NewNotifyService(b.Bot, b.Layout, b.Logger, clubOwnerSrvc, eventStorage, notificationStorage, eventParticipantStorage),
-		callbacksStorage:        b.Redis.Callbacks,
-		menuHandler:             menu.New(b),
-		codesStorage:            b.Redis.Codes,
-		emailsStorage:           b.Redis.Emails,
-		eventsStorage:           b.Redis.Events,
-		layout:                  b.Layout,
-		logger:                  b.Logger,
+		userService:             userSvc,
+		clubService:             clubSvc,
+		eventService:            eventSvc,
+		eventParticipantService: eventParticipantSvc,
+		qrService:               qrSvc,
+		notificationService:     notifySvc,
+		callbacksStorage:        callbacksStorage,
+		menuHandler:             menuHandler,
+		codesStorage:            codesStorage,
+		emailsStorage:           emailsStorage,
+		eventsStorage:           eventsStorage,
+		layout:                  lt,
+		logger:                  lg,
+		input:                   in,
+		eventIDTTL:              eventIDTTL,
 	}
 }
 

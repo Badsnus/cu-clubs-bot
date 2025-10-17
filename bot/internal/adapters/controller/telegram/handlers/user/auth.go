@@ -8,7 +8,6 @@ import (
 
 	"github.com/nlypage/intele/collector"
 	"github.com/redis/go-redis/v9"
-	"github.com/spf13/viper"
 	tele "gopkg.in/telebot.v3"
 	"gorm.io/gorm"
 
@@ -212,7 +211,7 @@ func (h Handler) externalUserAuth(c tele.Context) error {
 func (h Handler) grantUserAuth(c tele.Context) error {
 	h.logger.Infof("(user: %d) grant user auth", c.Sender().ID)
 
-	grantChatID := int64(viper.GetInt("bot.auth.grant-chat-id"))
+	grantChatID := h.grantChatID
 	member, err := c.Bot().ChatMemberOf(&tele.Chat{ID: grantChatID}, &tele.User{ID: c.Sender().ID})
 	if err != nil {
 		h.logger.Errorf("(user: %d) error while verification user's membership in the grant chat: %v", c.Sender().ID, err)
@@ -434,12 +433,12 @@ func (h Handler) studentAuth(c tele.Context) error {
 				banner.Auth.Caption(h.layout.Text(c, "input_error", h.layout.Text(c, "email_request"))),
 				h.layout.Markup(c, "auth:backToMenu"),
 			)
-		case !validator.Email(response.Message.Text, nil):
+		case !validator.Email(response.Message.Text, h.validEmailDomains):
 			_ = inputCollector.Send(c,
 				banner.Auth.Caption(h.layout.Text(c, "invalid_email")),
 				h.layout.Markup(c, "auth:backToMenu"),
 			)
-		case validator.Email(response.Message.Text, nil):
+		case validator.Email(response.Message.Text, h.validEmailDomains):
 			email = response.Message.Text
 			_, err := h.userService.GetByEmail(context.Background(), email)
 			if err == nil {
@@ -534,7 +533,7 @@ func (h Handler) studentAuth(c tele.Context) error {
 			emails.EmailContext{
 				FIO: fio,
 			},
-			viper.GetDuration("bot.session.email-ttl"),
+			h.emailTTL,
 		)
 		if err != nil {
 			h.logger.Errorf("(user: %d) error while saving email to redis: %v", c.Sender().ID, err)
@@ -552,8 +551,8 @@ func (h Handler) studentAuth(c tele.Context) error {
 				Email: email,
 				FIO:   fio,
 			},
-			viper.GetDuration("bot.session.auth-ttl"),
-			viper.GetDuration("bot.session.resend-ttl"),
+			h.authTTL,
+			h.resendTTL,
 		)
 		if err != nil {
 			h.logger.Errorf("(user: %d) error while saving auth code to redis: %v", c.Sender().ID, err)
@@ -574,7 +573,7 @@ func (h Handler) studentAuth(c tele.Context) error {
 	return c.Send(
 		banner.Auth.Caption(h.layout.Text(c,
 			"resend_timeout",
-			viper.GetDuration("bot.session.resend-ttl").Minutes()),
+			h.resendTTL.Minutes()),
 		),
 		h.layout.Markup(c, "auth:resendMenu"),
 	)
@@ -638,7 +637,7 @@ func (h Handler) resendAuthEmailConfirmationCode(c tele.Context) error {
 			c.Sender().ID,
 			email.Email,
 			email.EmailContext,
-			viper.GetDuration("bot.session.email-ttl"),
+			h.emailTTL,
 		)
 		if err != nil {
 			h.logger.Errorf("(user: %d) error while saving user email to redis: %v", c.Sender().ID, err)
@@ -655,8 +654,8 @@ func (h Handler) resendAuthEmailConfirmationCode(c tele.Context) error {
 				Email: email.Email,
 				FIO:   email.EmailContext.FIO,
 			},
-			viper.GetDuration("bot.session.auth-ttl"),
-			viper.GetDuration("bot.session.resend-ttl"),
+			h.authTTL,
+			h.resendTTL,
 		)
 		if err != nil {
 			h.logger.Errorf("(user: %d) error while saving auth code to redis: %v", c.Sender().ID, err)

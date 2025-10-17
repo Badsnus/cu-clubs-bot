@@ -6,8 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"math"
-	"os"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -15,14 +13,11 @@ import (
 	"github.com/nlypage/intele"
 	"github.com/nlypage/intele/collector"
 	"github.com/redis/go-redis/v9"
-	"github.com/spf13/viper"
 	tele "gopkg.in/telebot.v3"
 	"gopkg.in/telebot.v3/layout"
 	"gorm.io/gorm"
 
-	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/controller/telegram/bot"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/controller/telegram/handlers/menu"
-	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/database/postgres"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/database/redis/callbacks"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/database/redis/codes"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/database/redis/emails"
@@ -30,15 +25,12 @@ import (
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/common/errorz"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/dto"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/entity"
-	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/service"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/utils"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/utils/banner"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/utils/calendar"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/utils/location"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/utils/validator"
 	"github.com/Badsnus/cu-clubs-bot/bot/pkg/logger/types"
-	qr "github.com/Badsnus/cu-clubs-bot/bot/pkg/qrcode"
-	"github.com/Badsnus/cu-clubs-bot/bot/pkg/smtp"
 )
 
 type userService interface {
@@ -101,65 +93,41 @@ type Handler struct {
 	codesStorage     *codes.Storage
 	emailsStorage    *emails.Storage
 	eventsStorage    *events.Storage
-	callbacksStorage *callbacks.Storage
+	callbacksStorage callbacks.CallbackStorage
 	input            *intele.InputManager
 	layout           *layout.Layout
 	logger           *types.Logger
+
+	grantChatID       int64
+	timezone          string
+	validEmailDomains []string
+	emailTTL          time.Duration
+	authTTL           time.Duration
+	resendTTL         time.Duration
 }
 
-func New(b *bot.Bot) *Handler {
-	userStorage := postgres.NewUserStorage(b.DB)
-	eventStorage := postgres.NewEventStorage(b.DB)
-	eventParticipantStorage := postgres.NewEventParticipantStorage(b.DB)
-	passStorage := postgres.NewPassStorage(b.DB)
-	clubOwnerStorage := postgres.NewClubOwnerStorage(b.DB)
-
-	clubStorage := postgres.NewClubStorage(b.DB)
-
-	eventPartService := service.NewEventParticipantService(b.Logger, eventParticipantStorage, eventStorage, passStorage, userStorage, viper.GetStringSlice("settings.pass.excluded-roles"))
-
-	smtpClient := smtp.NewClient(b.SMTPDialer, viper.GetString("infrastructure.smtp.domain"), viper.GetString("infrastructure.smtp.email"))
-
-	wd, _ := os.Getwd()
-	emailHTMLFilePath := filepath.Join(wd, viper.GetString("settings.html.email-confirmation"))
-
-	userSrvc := service.NewUserService(userStorage, eventPartService, smtpClient, emailHTMLFilePath)
-
-	qrSrvc, err := service.NewQrService(
-		b.Bot,
-		qr.CU,
-		userSrvc,
-		nil,
-		viper.GetInt64("bot.qr.channel-id"),
-		viper.GetString("settings.qr.logo-path"),
-	)
-	if err != nil {
-		b.Logger.Fatalf("failed to create qr service: %v", err)
-	}
-
+func New(userSvc userService, eventSvc eventService, clubSvc clubService, eventParticipantSvc eventParticipantService, qrSvc qrService, notifySvc notificationService, menuHandler *menu.Handler, codesStorage *codes.Storage, emailsStorage *emails.Storage, eventsStorage *events.Storage, callbacksStorage callbacks.CallbackStorage, lt *layout.Layout, lg *types.Logger, in *intele.InputManager, grantChatID int64, timezone string, validEmailDomains []string, emailTTL time.Duration, authTTL time.Duration, resendTTL time.Duration) *Handler {
 	return &Handler{
-		userService:             userSrvc,
-		eventService:            service.NewEventService(eventStorage),
-		eventParticipantService: eventPartService,
-		clubService:             service.NewClubService(b.Bot, clubStorage),
-		qrService:               qrSrvc,
-		notificationService: service.NewNotifyService(
-			b.Bot,
-			b.Layout,
-			b.Logger,
-			service.NewClubOwnerService(clubOwnerStorage, userStorage),
-			nil,
-			nil,
-			nil,
-		),
-		menuHandler:      menu.New(b),
-		codesStorage:     b.Redis.Codes,
-		emailsStorage:    b.Redis.Emails,
-		eventsStorage:    b.Redis.Events,
-		callbacksStorage: b.Redis.Callbacks,
-		layout:           b.Layout,
-		input:            b.Input,
-		logger:           b.Logger,
+		userService:             userSvc,
+		eventService:            eventSvc,
+		eventParticipantService: eventParticipantSvc,
+		clubService:             clubSvc,
+		qrService:               qrSvc,
+		notificationService:     notifySvc,
+		menuHandler:             menuHandler,
+		codesStorage:            codesStorage,
+		emailsStorage:           emailsStorage,
+		eventsStorage:           eventsStorage,
+		callbacksStorage:        callbacksStorage,
+		layout:                  lt,
+		input:                   in,
+		logger:                  lg,
+		grantChatID:             grantChatID,
+		timezone:                timezone,
+		validEmailDomains:       validEmailDomains,
+		emailTTL:                emailTTL,
+		authTTL:                 authTTL,
+		resendTTL:               resendTTL,
 	}
 }
 
@@ -1650,7 +1618,7 @@ func (h Handler) changeRole(c tele.Context) error {
 }
 
 func (h Handler) changeRoleGrantUser(c tele.Context) error {
-	grantChatID := int64(viper.GetInt("bot.auth.grant-chat-id"))
+	grantChatID := h.grantChatID
 	member, err := c.Bot().ChatMemberOf(&tele.Chat{ID: grantChatID}, &tele.User{ID: c.Sender().ID})
 	if err != nil {
 		h.logger.Errorf("(user: %d) error while verification user's membership in the grant chat: %v", c.Sender().ID, err)
@@ -1711,12 +1679,12 @@ func (h Handler) changeRoleStudent(c tele.Context) error {
 				banner.PersonalAccount.Caption(h.layout.Text(c, "input_error", h.layout.Text(c, "email_request"))),
 				h.layout.Markup(c, "personalAccount:back"),
 			)
-		case !validator.Email(response.Message.Text, nil):
+		case !validator.Email(response.Message.Text, h.validEmailDomains):
 			_ = inputCollector.Send(c,
 				banner.PersonalAccount.Caption(h.layout.Text(c, "invalid_email")),
 				h.layout.Markup(c, "personalAccount:back"),
 			)
-		case validator.Email(response.Message.Text, nil):
+		case validator.Email(response.Message.Text, h.validEmailDomains):
 			email = response.Message.Text
 			_, err := h.userService.GetByEmail(context.Background(), email)
 			if err == nil {
@@ -1774,7 +1742,7 @@ func (h Handler) changeRoleStudent(c tele.Context) error {
 			emails.EmailContext{
 				FIO: user.FIO,
 			},
-			viper.GetDuration("bot.session.email-ttl"),
+			h.emailTTL,
 		)
 		if err != nil {
 			h.logger.Errorf("(user: %d) error while saving email to redis: %v", c.Sender().ID, err)
@@ -1792,8 +1760,8 @@ func (h Handler) changeRoleStudent(c tele.Context) error {
 				Email: email,
 				FIO:   user.FIO,
 			},
-			viper.GetDuration("bot.session.auth-ttl"),
-			viper.GetDuration("bot.session.resend-ttl"),
+			h.authTTL,
+			h.resendTTL,
 		)
 		if err != nil {
 			h.logger.Errorf("(user: %d) error while saving auth code to redis: %v", c.Sender().ID, err)
@@ -1814,7 +1782,7 @@ func (h Handler) changeRoleStudent(c tele.Context) error {
 	return c.Send(
 		banner.Auth.Caption(h.layout.Text(c,
 			"resend_timeout",
-			viper.GetDuration("bot.session.resend-ttl").Minutes()),
+			h.resendTTL.Minutes()),
 		),
 		h.layout.Markup(c, "changeRole:student:resendMenu"),
 	)
@@ -1871,7 +1839,7 @@ func (h Handler) resendChangeRoleEmailConfirmationCode(c tele.Context) error {
 			c.Sender().ID,
 			email.Email,
 			email.EmailContext,
-			viper.GetDuration("bot.session.email-ttl"),
+			h.emailTTL,
 		)
 		if err != nil {
 			h.logger.Errorf("(user: %d) error while saving user email to redis: %v", c.Sender().ID, err)
@@ -1888,8 +1856,8 @@ func (h Handler) resendChangeRoleEmailConfirmationCode(c tele.Context) error {
 				Email: email.Email,
 				FIO:   email.EmailContext.FIO,
 			},
-			viper.GetDuration("bot.session.auth-ttl"),
-			viper.GetDuration("bot.session.resend-ttl"),
+			h.authTTL,
+			h.resendTTL,
 		)
 		if err != nil {
 			h.logger.Errorf("(user: %d) error while saving auth code to redis: %v", c.Sender().ID, err)

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"strings"
 
+	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/entity"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/utils/banner"
 
 	"github.com/nlypage/intele"
@@ -14,11 +15,6 @@ import (
 
 	tele "gopkg.in/telebot.v3"
 	"gopkg.in/telebot.v3/layout"
-
-	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/controller/telegram/bot"
-	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/database/postgres"
-	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/entity"
-	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/service"
 )
 
 type userService interface {
@@ -40,18 +36,14 @@ type Handler struct {
 	input       *intele.InputManager
 }
 
-func New(b *bot.Bot) *Handler {
-	userStorageLocal := postgres.NewUserStorage(b.DB)
-	userServiceLocal := service.NewUserService(userStorageLocal, nil, nil, "")
-	clubStorage := postgres.NewClubStorage(b.DB)
-
+func New(userSvc userService, clubSvc clubService, b *tele.Bot, lt *layout.Layout, lg *types.Logger, in *intele.InputManager) *Handler {
 	return &Handler{
-		bot:         b.Bot,
-		layout:      b.Layout,
-		logger:      b.Logger,
-		userService: userServiceLocal,
-		clubService: service.NewClubService(b.Bot, clubStorage),
-		input:       b.Input,
+		bot:         b,
+		layout:      lt,
+		logger:      lg,
+		userService: userSvc,
+		clubService: clubSvc,
+		input:       in,
 	}
 }
 

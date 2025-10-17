@@ -7,7 +7,6 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/spf13/viper"
 	"go.uber.org/zap/zapcore"
 
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/controller/telegram/bot"
@@ -40,7 +39,19 @@ func (a *App) Run() {
 	logger.Log.Info("Bot starting")
 
 	// Setup bot handlers
-	setupBot.Setup(a.serviceProvider.Bot())
+	debug := a.serviceProvider.Cfg().Logger.Debug()
+	adminIDs := a.serviceProvider.Cfg().Bot.AdminIDs()
+	setupBot.Setup(
+		a.serviceProvider.Bot(),
+		a.serviceProvider.MiddlewaresHandler(),
+		a.serviceProvider.StartHandler(),
+		a.serviceProvider.UserHandler(),
+		a.serviceProvider.ClubOwnerHandler(),
+		a.serviceProvider.MenuHandler(),
+		a.serviceProvider.AdminHandler(),
+		debug,
+		adminIDs,
+	)
 
 	// Setup signal handling
 	sigChan := make(chan os.Signal, 1)
@@ -50,6 +61,15 @@ func (a *App) Run() {
 	go func() {
 		a.serviceProvider.Bot().Start()
 	}()
+
+	// Start notification scheduler
+	a.serviceProvider.NotifyService().StartNotifyScheduler()
+
+	// Start pass scheduler
+	err := a.serviceProvider.PassService().StartScheduler()
+	if err != nil {
+		logger.Log.Errorf("failed to start pass scheduler: %v", err)
+	}
 
 	// Wait for shutdown signal
 	sig := <-sigChan
@@ -70,9 +90,9 @@ func (a *App) gracefulShutdown() {
 		}
 
 		// Stop the bot
-		if a.serviceProvider.bot != nil {
+		if a.serviceProvider.Bot() != nil {
 			logger.Log.Info("Stopping bot...")
-			a.serviceProvider.bot.Stop()
+			a.serviceProvider.Bot().Stop()
 			logger.Log.Info("Bot stopped")
 		}
 
@@ -104,12 +124,10 @@ func (a *App) gracefulShutdown() {
 // initDeps initializes application dependencies
 func (a *App) initDeps(ctx context.Context) error {
 	inits := []func(context.Context) error{
-		a.initConfig,
 		a.initServiceProvider,
 		a.initLogger,
 		a.initBot,
 		a.initBanner,
-		a.initPassScheduler,
 	}
 
 	for _, f := range inits {
@@ -122,23 +140,6 @@ func (a *App) initDeps(ctx context.Context) error {
 	return nil
 }
 
-func (a *App) initConfig(_ context.Context) error {
-	viper.SetConfigName("config")
-	viper.SetConfigType("yaml")
-
-	// Search config in multiple locations
-	viper.AddConfigPath("/opt/config") // docker mounted config
-	viper.AddConfigPath(".")           // current directory
-	viper.AddConfigPath("../")         // parent directory
-	viper.AddConfigPath("../../")
-
-	if err := viper.ReadInConfig(); err != nil {
-		return fmt.Errorf("failed to read config: %w", err)
-	}
-
-	return nil
-}
-
 func (a *App) initServiceProvider(_ context.Context) error {
 	a.serviceProvider = newServiceProvider()
 	return nil
@@ -146,13 +147,11 @@ func (a *App) initServiceProvider(_ context.Context) error {
 
 // initBot initializes the bot and sets up hooks and notifications
 func (a *App) initBot(_ context.Context) error {
-	// Create bot instance
-	b, err := bot.New(a.serviceProvider.DB(), a.serviceProvider.RedisClient(), a.serviceProvider.SMTPDialer())
+	b, err := bot.New(a.serviceProvider.RedisClient())
 	if err != nil {
 		return fmt.Errorf("failed to create bot: %w", err)
 	}
 
-	// Set bot in service provider
 	a.serviceProvider.setBot(b)
 
 	// Setup logging hook if enabled
@@ -199,15 +198,5 @@ func (a *App) initBanner(_ context.Context) error {
 	if err != nil {
 		return fmt.Errorf("failed to initialize banners: %w", err)
 	}
-	return nil
-}
-
-// initPassScheduler initializes and starts the pass scheduler
-func (a *App) initPassScheduler(_ context.Context) error {
-	err := a.serviceProvider.PassService().StartScheduler()
-	if err != nil {
-		return fmt.Errorf("failed to start pass scheduler: %w", err)
-	}
-
 	return nil
 }
