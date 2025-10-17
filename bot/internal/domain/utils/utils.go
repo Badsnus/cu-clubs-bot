@@ -4,14 +4,13 @@ import (
 	"slices"
 	"time"
 
-	"github.com/spf13/viper"
 	tele "gopkg.in/telebot.v3"
 
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/utils/location"
 )
 
-func IsAdmin(userID int64) bool {
-	return slices.Contains(viper.GetIntSlice("bot.admin-ids"), int(userID))
+func IsAdmin(userID int64, adminIDs []int64) bool {
+	return slices.Contains(adminIDs, userID)
 }
 
 func ChangeMessageText(msg *tele.Message, text string) interface{} {

@@ -6,10 +6,7 @@ import (
 	tele "gopkg.in/telebot.v3"
 	"gopkg.in/telebot.v3/layout"
 
-	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/controller/telegram/bot"
-	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/database/postgres"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/entity"
-	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/service"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/utils"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/utils/banner"
 	"github.com/Badsnus/cu-clubs-bot/bot/pkg/logger/types"
@@ -22,23 +19,28 @@ type clubService interface {
 type Handler struct {
 	clubService clubService
 
-	layout *layout.Layout
-	logger *types.Logger
+	layout   *layout.Layout
+	logger   *types.Logger
+	adminIDs []int64
 }
 
-func New(b *bot.Bot) *Handler {
-	clubStorage := postgres.NewClubStorage(b.DB)
-
+func New(
+	clubSvc clubService,
+	lg *types.Logger,
+	lt *layout.Layout,
+	adminIDs []int64,
+) *Handler {
 	return &Handler{
-		clubService: service.NewClubService(b.Bot, clubStorage),
+		clubService: clubSvc,
 
-		logger: b.Logger,
-		layout: b.Layout,
+		logger:   lg,
+		layout:   lt,
+		adminIDs: adminIDs,
 	}
 }
 
 func (h Handler) SendMenu(c tele.Context) error {
-	isAdmin := utils.IsAdmin(c.Sender().ID)
+	isAdmin := utils.IsAdmin(c.Sender().ID, h.adminIDs)
 
 	menuMarkup := h.layout.Markup(c, "mainMenu:menu")
 
@@ -76,7 +78,7 @@ func (h Handler) SendMenu(c tele.Context) error {
 }
 
 func (h Handler) EditMenu(c tele.Context) error {
-	isAdmin := utils.IsAdmin(c.Sender().ID)
+	isAdmin := utils.IsAdmin(c.Sender().ID, h.adminIDs)
 
 	menuMarkup := h.layout.Markup(c, "mainMenu:menu")
 

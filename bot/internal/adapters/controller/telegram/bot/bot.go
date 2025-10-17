@@ -3,10 +3,8 @@ package bot
 import (
 	"github.com/nlypage/intele"
 
-	"gopkg.in/gomail.v2"
 	tele "gopkg.in/telebot.v3"
 	"gopkg.in/telebot.v3/layout"
-	"gorm.io/gorm"
 
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/database/redis"
 	"github.com/Badsnus/cu-clubs-bot/bot/pkg/logger"
@@ -15,15 +13,12 @@ import (
 
 type Bot struct {
 	*tele.Bot
-	Layout     *layout.Layout
-	DB         *gorm.DB
-	Redis      *redis.Client
-	SMTPDialer *gomail.Dialer
-	Logger     *types.Logger
-	Input      *intele.InputManager
+	Layout *layout.Layout
+	Logger *types.Logger
+	Input  *intele.InputManager
 }
 
-func New(db *gorm.DB, redisClient *redis.Client, smtpDialer *gomail.Dialer) (*Bot, error) {
+func New(redisClient *redis.Client) (*Bot, error) {
 	lt, err := layout.New("telegram.yml")
 	if err != nil {
 		return nil, err
@@ -56,13 +51,10 @@ func New(db *gorm.DB, redisClient *redis.Client, smtpDialer *gomail.Dialer) (*Bo
 	bot := &Bot{
 		Bot:    b,
 		Layout: lt,
-		DB:     db,
 		Input: intele.NewInputManager(intele.InputOptions{
 			Storage: redisClient.States,
 		}),
-		SMTPDialer: smtpDialer,
-		Logger:     botLogger,
-		Redis:      redisClient,
+		Logger: botLogger,
 	}
 
 	return bot, nil

@@ -15,24 +15,19 @@ import (
 
 	"github.com/nlypage/intele"
 	"github.com/nlypage/intele/collector"
-	"github.com/spf13/viper"
 	tele "gopkg.in/telebot.v3"
 	"gopkg.in/telebot.v3/layout"
 	"gorm.io/gorm"
 
-	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/controller/telegram/bot"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/controller/telegram/handlers/middlewares"
-	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/database/postgres"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/database/redis/events"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/common/errorz"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/dto"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/entity"
-	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/service"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/utils/banner"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/utils/location"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/utils/validator"
 	"github.com/Badsnus/cu-clubs-bot/bot/pkg/logger/types"
-	qr "github.com/Badsnus/cu-clubs-bot/bot/pkg/qrcode"
 )
 
 type clubService interface {
@@ -95,60 +90,50 @@ type Handler struct {
 	qrService               qrService
 	notificationService     notificationService
 
-	mailingChannelID int64
-	avatarChannelID  int64
-	introChannelID   int64
+	mailingChannelID       int64
+	avatarChannelID        int64
+	introChannelID         int64
+	passLocationSubstrings []string
 }
 
-func NewHandler(b *bot.Bot) *Handler {
-	clubStorage := postgres.NewClubStorage(b.DB)
-	clubOwnerStorage := postgres.NewClubOwnerStorage(b.DB)
-	userStorage := postgres.NewUserStorage(b.DB)
-	eventStorage := postgres.NewEventStorage(b.DB)
-	eventParticipantStorage := postgres.NewEventParticipantStorage(b.DB)
-	passStorage := postgres.NewPassStorage(b.DB)
-
-	eventSrvc := service.NewEventService(eventStorage)
-
-	qrSrvc, err := service.NewQrService(
-		b.Bot,
-		qr.CU,
-		nil,
-		eventSrvc,
-		viper.GetInt64("bot.qr.channel-id"),
-		viper.GetString("settings.qr.logo-path"),
-	)
-	if err != nil {
-		b.Logger.Fatalf("failed to create qr service: %v", err)
-	}
-
+func NewHandler(
+	b *tele.Bot,
+	lt *layout.Layout,
+	lg *types.Logger,
+	in *intele.InputManager,
+	eventsStorage *events.Storage,
+	clubSvc clubService,
+	clubOwnerSvc clubOwnerService,
+	userSvc userService,
+	eventSvc eventService,
+	eventParticipantSvc eventParticipantService,
+	qrSvc qrService,
+	notifySvc notificationService,
+	mailingChannelID int64,
+	avatarChannelID int64,
+	introChannelID int64,
+	passLocationSubstrings []string,
+) *Handler {
 	return &Handler{
-		bot:    b.Bot,
-		layout: b.Layout,
-		logger: b.Logger,
-		input:  b.Input,
+		bot:    b,
+		layout: lt,
+		logger: lg,
+		input:  in,
 
-		eventsStorage: b.Redis.Events,
+		eventsStorage: eventsStorage,
 
-		clubService:             service.NewClubService(b.Bot, clubStorage),
-		clubOwnerService:        service.NewClubOwnerService(clubOwnerStorage, userStorage),
-		userService:             service.NewUserService(userStorage, nil, nil, ""),
-		eventService:            eventSrvc,
-		eventParticipantService: service.NewEventParticipantService(b.Logger, eventParticipantStorage, eventStorage, passStorage, userStorage, viper.GetStringSlice("settings.pass.excluded-roles")),
-		qrService:               qrSrvc,
-		notificationService: service.NewNotifyService(
-			b.Bot,
-			b.Layout,
-			b.Logger,
-			service.NewClubOwnerService(clubOwnerStorage, userStorage),
-			nil,
-			nil,
-			eventParticipantStorage,
-		),
+		clubService:             clubSvc,
+		clubOwnerService:        clubOwnerSvc,
+		userService:             userSvc,
+		eventService:            eventSvc,
+		eventParticipantService: eventParticipantSvc,
+		qrService:               qrSvc,
+		notificationService:     notifySvc,
 
-		mailingChannelID: viper.GetInt64("bot.mailing.channel-id"),
-		avatarChannelID:  viper.GetInt64("bot.avatar.channel-id"),
-		introChannelID:   viper.GetInt64("bot.intro.channel-id"),
+		mailingChannelID:       mailingChannelID,
+		avatarChannelID:        avatarChannelID,
+		introChannelID:         introChannelID,
+		passLocationSubstrings: passLocationSubstrings,
 	}
 }
 
@@ -1651,7 +1636,7 @@ func (h Handler) createEvent(c tele.Context) error {
 	eventMaxParticipants, _ = strconv.Atoi(*steps[7].result)
 	eventMaxExpectedParticipants, _ = strconv.Atoi(*steps[8].result)
 
-	locationSubstrings := viper.GetStringSlice("settings.pass.location-substrings")
+	locationSubstrings := h.passLocationSubstrings
 	passRequired := len(locationSubstrings) == 0
 	if !passRequired {
 		for _, substring := range locationSubstrings {

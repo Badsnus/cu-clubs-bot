@@ -6,18 +6,16 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/nlypage/intele"
-	"github.com/nlypage/intele/collector"
 	tele "gopkg.in/telebot.v3"
 	"gopkg.in/telebot.v3/layout"
 	"gorm.io/gorm"
 
-	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/controller/telegram/bot"
-	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/database/postgres"
+	"github.com/nlypage/intele"
+	"github.com/nlypage/intele/collector"
+
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/common/errorz"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/dto"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/entity"
-	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/service"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/utils/banner"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/utils/validator"
 	"github.com/Badsnus/cu-clubs-bot/bot/pkg/logger/types"
@@ -51,7 +49,7 @@ type clubOwnerService interface {
 type Handler struct {
 	layout *layout.Layout
 	logger *types.Logger
-	bot    *bot.Bot
+	bot    *tele.Bot
 	input  *intele.InputManager
 
 	adminUserService adminUserService
@@ -59,19 +57,23 @@ type Handler struct {
 	clubOwnerService clubOwnerService
 }
 
-func New(b *bot.Bot) *Handler {
-	userStorage := postgres.NewUserStorage(b.DB)
-	clubStorage := postgres.NewClubStorage(b.DB)
-	clubOwnerStorage := postgres.NewClubOwnerStorage(b.DB)
-
+func New(
+	userSvc adminUserService,
+	clubSvc clubService,
+	clubOwnerSvc clubOwnerService,
+	b *tele.Bot,
+	lt *layout.Layout,
+	lg *types.Logger,
+	in *intele.InputManager,
+) *Handler {
 	return &Handler{
-		layout:           b.Layout,
-		logger:           b.Logger,
+		layout:           lt,
+		logger:           lg,
 		bot:              b,
-		input:            b.Input,
-		adminUserService: service.NewUserService(userStorage, nil, nil, ""),
-		clubService:      service.NewClubService(b.Bot, clubStorage),
-		clubOwnerService: service.NewClubOwnerService(clubOwnerStorage, userStorage),
+		input:            in,
+		adminUserService: userSvc,
+		clubService:      clubSvc,
+		clubOwnerService: clubOwnerSvc,
 	}
 }
 
@@ -367,7 +369,7 @@ func (h Handler) addClubOwner(c tele.Context) error {
 		h.logger.Errorf("(user: %d) error while get club: %v", c.Sender().ID, err)
 		return c.Send(
 			banner.Menu.Caption(h.layout.Text(c, "technical_issues", err.Error())),
-			h.layout.Markup(c, "admin:club:back", struct {
+			h.layout.Markup(c, "admin:clubs:back", struct {
 				ID   string
 				Page string
 			}{
@@ -419,7 +421,7 @@ func (h Handler) addClubOwner(c tele.Context) error {
 					ID   string
 					Page string
 				}{
-					ID:   club.ID,
+					ID:   clubID,
 					Page: page,
 				}),
 			)

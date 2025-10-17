@@ -4,8 +4,6 @@ import (
 	"net/mail"
 	"regexp"
 	"strings"
-
-	"github.com/spf13/viper"
 )
 
 func Fio(fio string, _ map[string]interface{}) bool {
@@ -16,8 +14,8 @@ func Fio(fio string, _ map[string]interface{}) bool {
 	return re.MatchString(strings.TrimSpace(fio))
 }
 
-func Email(email string, _ map[string]interface{}) bool {
-	return emailFormat(email) && emailDomain(email)
+func Email(email string, validDomains []string) bool {
+	return emailFormat(email) && emailDomain(email, validDomains)
 }
 
 func emailFormat(email string) bool {
@@ -25,9 +23,7 @@ func emailFormat(email string) bool {
 	return err == nil
 }
 
-func emailDomain(email string) bool {
-	validDomains := viper.GetStringSlice("bot.auth.valid-email-domains")
-
+func emailDomain(email string, validDomains []string) bool {
 	for _, domain := range validDomains {
 		if strings.HasSuffix(email, domain) {
 			return true

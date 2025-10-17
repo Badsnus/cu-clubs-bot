@@ -1,6 +1,12 @@
 package config
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/spf13/viper"
+
+	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/utils/location"
+)
 
 // Config represents the unified configuration for the entire application
 type Config struct {
@@ -11,9 +17,23 @@ type Config struct {
 	Bot       BotConfig
 	App       AppConfig
 	Banner    BannerConfig
+	Session   SessionConfig
 }
 
 func NewConfig() (*Config, error) {
+	viper.SetConfigName("config")
+	viper.SetConfigType("yaml")
+
+	// Search config in multiple locations
+	viper.AddConfigPath("/opt/config") // docker mounted config
+	viper.AddConfigPath(".")           // current directory
+	viper.AddConfigPath("../")         // parent directory
+	viper.AddConfigPath("../../")
+
+	if err := viper.ReadInConfig(); err != nil {
+		return nil, fmt.Errorf("failed to read config: %w", err)
+	}
+
 	loggerCfg, err := NewLoggerConfig()
 	if err != nil {
 		return nil, err
@@ -24,7 +44,7 @@ func NewConfig() (*Config, error) {
 		return nil, fmt.Errorf("banner configuration validation failed: %w", err)
 	}
 
-	return &Config{
+	cfg := &Config{
 		Logger:    loggerCfg,
 		PG:        NewPGConfig(),
 		RedisConf: NewRedisConfig(),
@@ -32,5 +52,15 @@ func NewConfig() (*Config, error) {
 		Bot:       NewBotConfig(),
 		App:       NewAppConfig(),
 		Banner:    bannerCfg,
-	}, nil
+		Session:   NewSessionConfig(),
+	}
+
+	location.Init(cfg.App.Timezone())
+
+	// Validate configuration and print warnings
+	warningsManager := NewWarningsManager()
+	warningsManager.ValidateConfig(cfg)
+	warningsManager.PrintWarnings()
+
+	return cfg, nil
 }

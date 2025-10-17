@@ -13,6 +13,12 @@ import (
 
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/config"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/controller/telegram/bot"
+	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/controller/telegram/handlers/admin"
+	clubowner "github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/controller/telegram/handlers/clubOwner"
+	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/controller/telegram/handlers/menu"
+	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/controller/telegram/handlers/middlewares"
+	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/controller/telegram/handlers/start"
+	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/controller/telegram/handlers/user"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/database/postgres"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/database/redis"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/service"
@@ -31,7 +37,7 @@ type serviceProvider struct {
 	smtpDialer  *gomail.Dialer
 	smtpClient  *smtp.Client
 
-	// Bot
+	// Bot dependencies
 	bot *bot.Bot
 
 	// Storage layer
@@ -53,6 +59,14 @@ type serviceProvider struct {
 	notifyService           *service.NotifyService
 	qrService               *service.QrService
 	versionService          *service.VersionService
+
+	// Handlers
+	adminHandler       *admin.Handler
+	userHandler        *user.Handler
+	startHandler       *start.Handler
+	menuHandler        *menu.Handler
+	middlewaresHandler *middlewares.Handler
+	clubOwnerHandler   *clubowner.Handler
 }
 
 func newServiceProvider() *serviceProvider {
@@ -99,6 +113,7 @@ func (s *serviceProvider) DB() *gorm.DB {
 		time.Local = s.cfg.Logger.TimeLocation()
 
 		dsn := s.cfg.PG.DSN()
+		logger.Log.Info(dsn)
 
 		database, err := gorm.Open(postgresDriver.Open(dsn), gormConfig)
 		if err != nil {
@@ -148,6 +163,10 @@ func (s *serviceProvider) RedisClient() *redis.Client {
 		s.redisClient = r
 	}
 
+	return s.redisClient
+}
+
+func (s *serviceProvider) Redis() *redis.Client {
 	return s.redisClient
 }
 
@@ -373,18 +392,136 @@ func (s *serviceProvider) VersionService() *service.VersionService {
 	return s.versionService
 }
 
-// Bot
+// Bot dependencies
 
 func (s *serviceProvider) Bot() *bot.Bot {
-	if s.bot == nil {
-		// This should not be called directly during initialization
-		logger.Log.Error("Bot() called before successful initialization")
-		return nil
-	}
 	return s.bot
 }
 
 // setBot sets the bot instance (used by App during initialization)
 func (s *serviceProvider) setBot(b *bot.Bot) {
 	s.bot = b
+}
+
+// Handlers
+
+func (s *serviceProvider) AdminHandler() *admin.Handler {
+	if s.adminHandler == nil {
+		s.adminHandler = admin.New(
+			s.UserService(),
+			s.ClubService(),
+			s.ClubOwnerService(),
+			s.Bot().Bot,
+			s.Bot().Layout,
+			s.Bot().Logger,
+			s.Bot().Input,
+		)
+	}
+	return s.adminHandler
+}
+
+func (s *serviceProvider) UserHandler() *user.Handler {
+	if s.userHandler == nil {
+		s.userHandler = user.New(
+			s.UserService(),
+			s.EventService(),
+			s.ClubService(),
+			s.EventParticipantService(),
+			s.QrService(),
+			s.NotifyService(),
+			s.MenuHandler(),
+			s.Redis().Codes,
+			s.Redis().Emails,
+			s.Redis().Events,
+			s.Redis().Callbacks,
+			s.Bot().Layout,
+			s.Bot().Logger,
+			s.Bot().Input,
+			s.Cfg().Bot.GrantChatID(),
+			s.Cfg().App.Timezone(),
+			s.Cfg().Bot.ValidEmailDomains(),
+			s.Cfg().Session.EmailTTL(),
+			s.Cfg().Session.AuthTTL(),
+			s.Cfg().Session.ResendTTL(),
+		)
+	}
+	return s.userHandler
+}
+
+func (s *serviceProvider) StartHandler() *start.Handler {
+	if s.startHandler == nil {
+		s.startHandler = start.New(
+			s.UserService(),
+			s.ClubService(),
+			s.EventService(),
+			s.EventParticipantService(),
+			s.QrService(),
+			s.NotifyService(),
+			s.Redis().Callbacks,
+			s.MenuHandler(),
+			s.Redis().Codes,
+			s.Redis().Emails,
+			s.Redis().Events,
+			s.Bot().Layout,
+			s.Bot().Logger,
+			s.Bot().Input,
+			s.Cfg().Session.EventIDTTL(),
+		)
+	}
+	return s.startHandler
+}
+
+func (s *serviceProvider) MenuHandler() *menu.Handler {
+	if s.menuHandler == nil {
+		s.menuHandler = menu.New(
+			s.ClubService(),
+			s.Bot().Logger,
+			s.Bot().Layout,
+			s.Cfg().Bot.AdminIDs(),
+		)
+	}
+	return s.menuHandler
+}
+
+func (s *serviceProvider) MiddlewaresHandler() *middlewares.Handler {
+	if s.middlewaresHandler == nil {
+		s.middlewaresHandler = middlewares.New(
+			s.UserService(),
+			s.ClubService(),
+			s.Bot().Bot,
+			s.Bot().Layout,
+			s.Bot().Logger,
+			s.Bot().Input,
+		)
+	}
+	return s.middlewaresHandler
+}
+
+func (s *serviceProvider) ClubOwnerHandler() *clubowner.Handler {
+	if s.clubOwnerHandler == nil {
+		s.clubOwnerHandler = clubowner.NewHandler(
+			s.Bot().Bot,
+			s.Bot().Layout,
+			s.Bot().Logger,
+			s.Bot().Input,
+			s.Redis().Events,
+			s.ClubService(),
+			s.ClubOwnerService(),
+			s.UserService(),
+			s.EventService(),
+			s.EventParticipantService(),
+			s.QrService(),
+			s.NotifyService(),
+			s.Cfg().Bot.MailingChannelID(),
+			s.Cfg().Bot.AvatarChannelID(),
+			s.Cfg().Bot.IntroChannelID(),
+			s.Cfg().App.PassLocationSubstrings(),
+		)
+	}
+	return s.clubOwnerHandler
+}
+
+// Cfg returns the config
+func (s *serviceProvider) Cfg() *config.Config {
+	return s.cfg
 }

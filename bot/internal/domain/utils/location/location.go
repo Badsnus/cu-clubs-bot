@@ -3,20 +3,24 @@ package location
 import (
 	"log"
 	"time"
-
-	"github.com/spf13/viper"
 )
 
 var location *time.Location
 
-func Location() *time.Location {
+func Init(timezone string) {
 	if location != nil {
-		return location
+		return
 	}
 	var err error
-	location, err = time.LoadLocation(viper.GetString("settings.timezone"))
+	location, err = time.LoadLocation(timezone)
 	if err != nil {
 		log.Fatalf("error while load time location: %v", err)
+	}
+}
+
+func Location() *time.Location {
+	if location == nil {
+		log.Fatal("location not initialized")
 	}
 	return location
 }
