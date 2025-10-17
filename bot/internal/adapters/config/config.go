@@ -57,28 +57,10 @@ func NewConfig() (*Config, error) {
 
 	location.Init(cfg.App.Timezone())
 
-	// Log warnings for empty config values
-	if cfg.Logger.LogToChannel() && cfg.Logger.ChannelID() == 0 {
-		fmt.Printf("Warning: Logger.ChannelID is empty, but LogToChannel is enabled\n")
-	}
-	if cfg.App.VersionNotifyOnStartup() && cfg.App.VersionChannelID() == 0 {
-		fmt.Printf("Warning: App.VersionChannelID is empty, but VersionNotifyOnStartup is enabled\n")
-	}
-	if len(cfg.Bot.AdminIDs()) == 0 {
-		fmt.Printf("Warning: Bot.AdminIDs is empty, admin functionality may not work properly\n")
-	}
-	if cfg.Bot.MailingChannelID() == 0 {
-		fmt.Printf("Warning: Bot.MailingChannelID is empty, mailing functionality may not work\n")
-	}
-	if cfg.Bot.AvatarChannelID() == 0 {
-		fmt.Printf("Warning: Bot.AvatarChannelID is empty, avatar uploads may not work\n")
-	}
-	if cfg.Bot.IntroChannelID() == 0 {
-		fmt.Printf("Warning: Bot.IntroChannelID is empty, intro uploads may not work\n")
-	}
-	if len(cfg.App.PassLocationSubstrings()) == 0 {
-		fmt.Printf("Warning: App.PassLocationSubstrings is empty, pass location validation may not work\n")
-	}
+	// Validate configuration and print warnings
+	warningsManager := NewWarningsManager()
+	warningsManager.ValidateConfig(cfg)
+	warningsManager.PrintWarnings()
 
 	return cfg, nil
 }

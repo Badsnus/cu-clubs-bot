@@ -1,8 +1,6 @@
 package config
 
 import (
-	"fmt"
-
 	"github.com/spf13/viper"
 )
 
@@ -83,19 +81,4 @@ func (cfg *botConfig) QRChannelID() int64 {
 
 func (cfg *botConfig) ValidEmailDomains() []string {
 	return cfg.validEmailDomains
-}
-
-func (cfg *botConfig) Validate() {
-	if len(cfg.adminIDs) == 0 {
-		fmt.Printf("Warning: Bot.AdminIDs is empty, admin functionality may not work properly\n")
-	}
-	if cfg.mailingChannelID == 0 {
-		fmt.Printf("Warning: Bot.MailingChannelID is empty, mailing functionality may not work\n")
-	}
-	if cfg.avatarChannelID == 0 {
-		fmt.Printf("Warning: Bot.AvatarChannelID is empty, avatar uploads may not work\n")
-	}
-	if cfg.introChannelID == 0 {
-		fmt.Printf("Warning: Bot.IntroChannelID is empty, intro uploads may not work\n")
-	}
 }
