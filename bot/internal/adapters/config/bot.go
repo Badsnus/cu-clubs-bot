@@ -19,7 +19,7 @@ type botConfig struct {
 func NewBotConfig() BotConfig {
 	return &botConfig{
 		token:         viper.GetString("bot.token"),
-		passChannelID: viper.GetInt64("bot.pass.channel-id"),
+		passChannelID: viper.GetInt64("settings.pass.channel-id"),
 		qrChannelID:   viper.GetInt64("bot.qr.channel-id"),
 	}
 }

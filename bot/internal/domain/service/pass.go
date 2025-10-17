@@ -465,13 +465,13 @@ func (s *PassService) sendConsolidatedPassNotification(ctx context.Context, even
 	if totalPasses > 0 {
 		consolidatedExcel, err = s.generateConsolidatedPassExcel(ctx, eventsWithPasses)
 		if err != nil {
-			s.logger.Error("Failed to generate consolidated Excel file", "error", err)
+			s.logger.Errorw("Failed to generate consolidated Excel file", "error", err)
 			return false, false, err
 		}
 	} else {
 		consolidatedExcel, err = s.generateEmptyPassExcel()
 		if err != nil {
-			s.logger.Error("Failed to generate empty Excel file", "error", err)
+			s.logger.Errorw("Failed to generate empty Excel file", "error", err)
 			return false, false, err
 		}
 	}
@@ -479,10 +479,11 @@ func (s *PassService) sendConsolidatedPassNotification(ctx context.Context, even
 	if config.TelegramChatID != 0 {
 		buf := bytes.NewBuffer(consolidatedExcel.Bytes())
 		if sendErr := s.sendTelegramNotification(config.TelegramChatID, message, buf); sendErr != nil {
-			s.logger.Error("Failed to send consolidated Telegram notification", "error", sendErr)
+			s.logger.Errorw("Failed to send consolidated Telegram notification", "error", sendErr)
 			telegramSent = false
 		} else {
 			telegramSent = true
+			s.logger.Info("Consolidated Telegram notification sent")
 		}
 	}
 
@@ -490,15 +491,18 @@ func (s *PassService) sendConsolidatedPassNotification(ctx context.Context, even
 		subject := fmt.Sprintf("Сводка пропусков - %d событий (%d пропусков)",
 			len(eventsWithPasses), totalPasses)
 
-		emailSent = true
+		emailSent = false
 		for _, email := range config.EmailRecipients {
 			buf := bytes.NewBuffer(consolidatedExcel.Bytes())
-			if sendErr := s.smtpClient.Send(email, message, message, subject, buf); sendErr != nil {
-				s.logger.Error("Failed to send email", "email", email, "error", sendErr)
-				emailSent = false
+			if sendErr := s.smtpClient.Send(email, "", "", subject, buf); sendErr != nil {
+				s.logger.Errorw("Failed to send email", "email", email, "error", sendErr)
+			} else {
+				emailSent = true
 			}
 		}
 	}
+
+	s.logger.Infow("Notification send results", "telegramSent", telegramSent, "emailSent", emailSent)
 
 	return telegramSent, emailSent, nil
 }
