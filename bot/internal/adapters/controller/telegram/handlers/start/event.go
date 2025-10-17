@@ -5,7 +5,6 @@ import (
 	"errors"
 	"time"
 
-	"github.com/spf13/viper"
 	tele "gopkg.in/telebot.v3"
 	"gorm.io/gorm"
 
@@ -28,7 +27,7 @@ func (h Handler) eventMenu(c tele.Context, eventID string) error {
 				h.layout.Markup(c, "mainMenu:back"),
 			)
 		}
-		h.eventsStorage.SetEventID(c.Sender().ID, "before-reg-event-id", eventID, viper.GetDuration("bot.session.event-id-ttl"))
+		h.eventsStorage.SetEventID(c.Sender().ID, "before-reg-event-id", eventID, h.eventIDTTL)
 		return c.Send(
 			banner.Auth.Caption(h.layout.Text(c, "auth_required")),
 			h.layout.Markup(c, "core:hide"),

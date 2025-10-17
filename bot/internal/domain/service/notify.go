@@ -139,7 +139,7 @@ func (s *NotifyService) SendEventUpdate(eventID string, what interface{}, opts .
 
 // StartNotifyScheduler starts the scheduler for sending notifications
 func (s *NotifyService) StartNotifyScheduler() {
-	s.logger.Info("Starting notify scheduler")
+	s.logger.Debug("Starting notify scheduler")
 	go func() {
 		ticker := time.NewTicker(1 * time.Minute)
 		defer ticker.Stop()
@@ -149,6 +149,7 @@ func (s *NotifyService) StartNotifyScheduler() {
 			s.checkAndNotify(ctx)
 		}
 	}()
+	s.logger.Info("Notify scheduler started")
 }
 
 // checkAndNotify checks for events starting in the next 25 hours (to cover both day and hour notifications)
