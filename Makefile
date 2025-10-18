@@ -153,7 +153,7 @@ go-test-coverage: ## 📊 Запустить тесты и показать по
 	@cd bot && go test ./... -coverprofile=coverage.out
 	@cd bot && go tool cover -func=coverage.out
 	@cd bot && go tool cover -html=coverage.out -o coverage.html
-	@printf "$(GREEN)✅ Отчет о покрытии создан: bot/coverage.html$(RESET)\n"
+	@printf "$(GREEN)✅ Отчет о покрытии создан: app/coverage.html$(RESET)\n"
 
 go-lint: ## 🔍 Запустить линтер (golangci-lint)
 	@printf "$(BLUE)$(BOLD)🔍 Запускаю линтер...$(RESET)\n"
