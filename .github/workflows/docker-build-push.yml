@@ -12,7 +12,7 @@ on:
 
 jobs:
   lint:
-    name: Run GolangCI-Lint
+    name: Run Go Code Checks
     runs-on: ubuntu-latest
 
     steps:
@@ -22,23 +22,23 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v4
         with:
-          go-version: 1.21
+          go-version: 1.25.2
 
-      - name: Install dependencies
-        working-directory: ./bot
+      - name: Install tools
         run: |
-          go mod tidy
-          go mod verify
-          go mod download
+          make install-tools
 
-      - name: Install golangci-lint
+      - name: Run Go linting
         run: |
-          curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.63.4
+          make go-lint
 
-      - name: Run golangci-lint
-        working-directory: ./bot
+      - name: Run Go formatting check
         run: |
-          golangci-lint run --out-format colored-line-number
+          make go-fmt
+
+      - name: Run Go vet
+        run: |
+          make go-vet
 
   build-and-push:
     name: Build and Push Docker Image
