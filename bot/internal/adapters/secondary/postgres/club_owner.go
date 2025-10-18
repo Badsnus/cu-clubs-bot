@@ -89,9 +89,13 @@ func (s *ClubOwnerRepository) GetByClubID(ctx context.Context, clubID string) ([
 
 	result := make([]dto.ClubOwner, len(rawResult))
 	for i, raw := range rawResult {
-		email, err := valueobject.NewEmail(raw.Email)
-		if err != nil {
-			return nil, fmt.Errorf("invalid email format for user %d: %w", raw.UserID, err)
+		var email valueobject.Email
+		if raw.Email != "" {
+			var err error
+			email, err = valueobject.NewEmail(raw.Email)
+			if err != nil {
+				return nil, fmt.Errorf("invalid email format for user %d: %w", raw.UserID, err)
+			}
 		}
 
 		fio, err := valueobject.NewFIOFromString(raw.FIO)
@@ -141,9 +145,13 @@ func (s *ClubOwnerRepository) GetByUserID(ctx context.Context, userID int64) ([]
 
 	result := make([]dto.ClubOwner, len(rawResult))
 	for i, raw := range rawResult {
-		email, err := valueobject.NewEmail(raw.Email)
-		if err != nil {
-			return nil, fmt.Errorf("invalid email format for user %d: %w", raw.UserID, err)
+		var email valueobject.Email
+		if raw.Email != "" {
+			var err error
+			email, err = valueobject.NewEmail(raw.Email)
+			if err != nil {
+				return nil, fmt.Errorf("invalid email format for user %d: %w", raw.UserID, err)
+			}
 		}
 
 		fio, err := valueobject.NewFIOFromString(raw.FIO)
