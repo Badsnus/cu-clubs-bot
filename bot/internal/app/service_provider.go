@@ -11,20 +11,23 @@ import (
 	"gorm.io/gorm"
 	gormLogger "gorm.io/gorm/logger"
 
+	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/secondary/smtp"
+	"github.com/Badsnus/cu-clubs-bot/bot/internal/ports/secondary"
+
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/config"
-	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/controller/telegram/bot"
-	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/controller/telegram/handlers/admin"
-	clubowner "github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/controller/telegram/handlers/clubOwner"
-	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/controller/telegram/handlers/menu"
-	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/controller/telegram/handlers/middlewares"
-	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/controller/telegram/handlers/start"
-	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/controller/telegram/handlers/user"
-	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/database/postgres"
-	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/database/redis"
+	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/primary/telegram/bot"
+	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/primary/telegram/handlers/admin"
+	clubowner "github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/primary/telegram/handlers/clubOwner"
+	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/primary/telegram/handlers/menu"
+	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/primary/telegram/handlers/middlewares"
+	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/primary/telegram/handlers/start"
+	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/primary/telegram/handlers/user"
+	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/secondary/postgres"
+	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/secondary/redis"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/service"
+	"github.com/Badsnus/cu-clubs-bot/bot/internal/ports/primary"
 	"github.com/Badsnus/cu-clubs-bot/bot/pkg/logger"
 	qr "github.com/Badsnus/cu-clubs-bot/bot/pkg/qrcode"
-	"github.com/Badsnus/cu-clubs-bot/bot/pkg/smtp"
 )
 
 type serviceProvider struct {
@@ -35,30 +38,30 @@ type serviceProvider struct {
 	db          *gorm.DB
 	redisClient *redis.Client
 	smtpDialer  *gomail.Dialer
-	smtpClient  *smtp.Client
+	smtpClient  secondary.SMTPClient
 
 	// Bot dependencies
 	bot *bot.Bot
 
 	// Storage layer
-	userStorage             *postgres.UserStorage
-	clubStorage             *postgres.ClubStorage
-	eventStorage            *postgres.EventStorage
-	eventParticipantStorage *postgres.EventParticipantStorage
-	passStorage             *postgres.PassStorage
-	clubOwnerStorage        *postgres.ClubOwnerStorage
-	notificationStorage     *postgres.NotificationStorage
+	userRepo             secondary.UserRepository
+	clubRepo             secondary.ClubRepository
+	eventRepo            secondary.EventRepository
+	eventParticipantRepo secondary.EventParticipantRepository
+	passRepo             secondary.PassRepository
+	clubOwnerRepo        secondary.ClubOwnerRepository
+	notificationRepo     secondary.NotificationRepository
 
 	// Service layer
-	userService             *service.UserService
-	clubService             *service.ClubService
-	eventService            *service.EventService
-	eventParticipantService *service.EventParticipantService
-	passService             *service.PassService
-	clubOwnerService        *service.ClubOwnerService
-	notifyService           *service.NotifyService
-	qrService               *service.QrService
-	versionService          *service.VersionService
+	userService             primary.UserService
+	clubService             primary.ClubService
+	eventService            primary.EventService
+	eventParticipantService primary.EventParticipantService
+	passService             primary.PassService
+	clubOwnerService        primary.ClubOwnerService
+	notifyService           primary.NotifyService
+	qrService               primary.QrService
+	versionService          primary.VersionService
 
 	// Handlers
 	adminHandler       *admin.Handler
@@ -113,7 +116,6 @@ func (s *serviceProvider) DB() *gorm.DB {
 		time.Local = s.cfg.Logger.TimeLocation()
 
 		dsn := s.cfg.PG.DSN()
-		logger.Log.Info(dsn)
 
 		database, err := gorm.Open(postgresDriver.Open(dsn), gormConfig)
 		if err != nil {
@@ -183,7 +185,7 @@ func (s *serviceProvider) SMTPDialer() *gomail.Dialer {
 	return s.smtpDialer
 }
 
-func (s *serviceProvider) SMTPClient() *smtp.Client {
+func (s *serviceProvider) SMTPClient() secondary.SMTPClient {
 	if s.smtpClient == nil {
 		s.smtpClient = smtp.NewClient(s.SMTPDialer(), s.cfg.SMTP.Domain(), s.cfg.SMTP.Email())
 	}
@@ -193,69 +195,69 @@ func (s *serviceProvider) SMTPClient() *smtp.Client {
 
 // Storage layer
 
-func (s *serviceProvider) UserStorage() *postgres.UserStorage {
-	if s.userStorage == nil {
-		s.userStorage = postgres.NewUserStorage(s.DB())
+func (s *serviceProvider) UserRepo() secondary.UserRepository {
+	if s.userRepo == nil {
+		s.userRepo = postgres.NewUserRepository(s.DB())
 	}
 
-	return s.userStorage
+	return s.userRepo
 }
 
-func (s *serviceProvider) ClubStorage() *postgres.ClubStorage {
-	if s.clubStorage == nil {
-		s.clubStorage = postgres.NewClubStorage(s.DB())
+func (s *serviceProvider) ClubRepo() secondary.ClubRepository {
+	if s.clubRepo == nil {
+		s.clubRepo = postgres.NewClubRepository(s.DB())
 	}
 
-	return s.clubStorage
+	return s.clubRepo
 }
 
-func (s *serviceProvider) EventStorage() *postgres.EventStorage {
-	if s.eventStorage == nil {
-		s.eventStorage = postgres.NewEventStorage(s.DB())
+func (s *serviceProvider) EventRepo() secondary.EventRepository {
+	if s.eventRepo == nil {
+		s.eventRepo = postgres.NewEventRepository(s.DB())
 	}
 
-	return s.eventStorage
+	return s.eventRepo
 }
 
-func (s *serviceProvider) EventParticipantStorage() *postgres.EventParticipantStorage {
-	if s.eventParticipantStorage == nil {
-		s.eventParticipantStorage = postgres.NewEventParticipantStorage(s.DB())
+func (s *serviceProvider) EventParticipantRepo() secondary.EventParticipantRepository {
+	if s.eventParticipantRepo == nil {
+		s.eventParticipantRepo = postgres.NewEventParticipantRepository(s.DB())
 	}
 
-	return s.eventParticipantStorage
+	return s.eventParticipantRepo
 }
 
-func (s *serviceProvider) PassStorage() *postgres.PassStorage {
-	if s.passStorage == nil {
-		s.passStorage = postgres.NewPassStorage(s.DB())
+func (s *serviceProvider) PassRepo() secondary.PassRepository {
+	if s.passRepo == nil {
+		s.passRepo = postgres.NewPassRepository(s.DB())
 	}
 
-	return s.passStorage
+	return s.passRepo
 }
 
-func (s *serviceProvider) ClubOwnerStorage() *postgres.ClubOwnerStorage {
-	if s.clubOwnerStorage == nil {
-		s.clubOwnerStorage = postgres.NewClubOwnerStorage(s.DB())
+func (s *serviceProvider) ClubOwnerRepo() secondary.ClubOwnerRepository {
+	if s.clubOwnerRepo == nil {
+		s.clubOwnerRepo = postgres.NewClubOwnerRepository(s.DB())
 	}
 
-	return s.clubOwnerStorage
+	return s.clubOwnerRepo
 }
 
-func (s *serviceProvider) NotificationStorage() *postgres.NotificationStorage {
-	if s.notificationStorage == nil {
-		s.notificationStorage = postgres.NewNotificationStorage(s.DB())
+func (s *serviceProvider) NotificationRepo() secondary.NotificationRepository {
+	if s.notificationRepo == nil {
+		s.notificationRepo = postgres.NewNotificationRepository(s.DB())
 	}
 
-	return s.notificationStorage
+	return s.notificationRepo
 }
 
 // Service layer
 
-func (s *serviceProvider) UserService() *service.UserService {
+func (s *serviceProvider) UserService() primary.UserService {
 	if s.userService == nil {
 		s.userService = service.NewUserService(
-			s.UserStorage(),
-			s.EventParticipantStorage(),
+			s.UserRepo(),
+			s.EventParticipantRepo(),
 			s.SMTPClient(),
 			s.cfg.App.EmailConfirmationTemplate(),
 		)
@@ -264,23 +266,23 @@ func (s *serviceProvider) UserService() *service.UserService {
 	return s.userService
 }
 
-func (s *serviceProvider) ClubService() *service.ClubService {
+func (s *serviceProvider) ClubService() primary.ClubService {
 	if s.clubService == nil {
-		s.clubService = service.NewClubService(s.Bot().Bot, s.ClubStorage())
+		s.clubService = service.NewClubService(s.Bot().Bot, s.ClubRepo())
 	}
 
 	return s.clubService
 }
 
-func (s *serviceProvider) EventService() *service.EventService {
+func (s *serviceProvider) EventService() primary.EventService {
 	if s.eventService == nil {
-		s.eventService = service.NewEventService(s.EventStorage())
+		s.eventService = service.NewEventService(s.EventRepo())
 	}
 
 	return s.eventService
 }
 
-func (s *serviceProvider) EventParticipantService() *service.EventParticipantService {
+func (s *serviceProvider) EventParticipantService() primary.EventParticipantService {
 	if s.eventParticipantService == nil {
 		botLogger, err := logger.Named("event-participant")
 		if err != nil {
@@ -289,10 +291,10 @@ func (s *serviceProvider) EventParticipantService() *service.EventParticipantSer
 
 		s.eventParticipantService = service.NewEventParticipantService(
 			botLogger,
-			s.EventParticipantStorage(),
-			s.EventStorage(),
-			s.PassStorage(),
-			s.UserStorage(),
+			s.EventParticipantRepo(),
+			s.EventRepo(),
+			s.PassRepo(),
+			s.UserRepo(),
 			s.cfg.App.PassExcludedRoles(),
 		)
 	}
@@ -300,7 +302,7 @@ func (s *serviceProvider) EventParticipantService() *service.EventParticipantSer
 	return s.eventParticipantService
 }
 
-func (s *serviceProvider) PassService() *service.PassService {
+func (s *serviceProvider) PassService() primary.PassService {
 	if s.passService == nil {
 		botLogger, err := logger.Named("pass")
 		if err != nil {
@@ -310,10 +312,10 @@ func (s *serviceProvider) PassService() *service.PassService {
 		s.passService = service.NewPassService(
 			s.Bot().Bot,
 			botLogger,
-			s.PassStorage(),
-			s.EventStorage(),
-			s.UserStorage(),
-			s.ClubStorage(),
+			s.PassRepo(),
+			s.EventRepo(),
+			s.UserRepo(),
+			s.ClubRepo(),
 			s.SMTPClient(),
 			s.cfg.App.PassEmails(),
 			s.cfg.Bot.PassChannelID(),
@@ -323,18 +325,18 @@ func (s *serviceProvider) PassService() *service.PassService {
 	return s.passService
 }
 
-func (s *serviceProvider) ClubOwnerService() *service.ClubOwnerService {
+func (s *serviceProvider) ClubOwnerService() primary.ClubOwnerService {
 	if s.clubOwnerService == nil {
 		s.clubOwnerService = service.NewClubOwnerService(
-			s.ClubOwnerStorage(),
-			s.UserStorage(),
+			s.ClubOwnerRepo(),
+			s.UserRepo(),
 		)
 	}
 
 	return s.clubOwnerService
 }
 
-func (s *serviceProvider) NotifyService() *service.NotifyService {
+func (s *serviceProvider) NotifyService() primary.NotifyService {
 	if s.notifyService == nil {
 		notifyLogger, err := logger.Named("notify")
 		if err != nil {
@@ -346,16 +348,16 @@ func (s *serviceProvider) NotifyService() *service.NotifyService {
 			s.Bot().Layout,
 			notifyLogger,
 			s.ClubOwnerService(),
-			s.EventStorage(),
-			s.NotificationStorage(),
-			s.EventParticipantStorage(),
+			s.EventRepo(),
+			s.NotificationRepo(),
+			s.EventParticipantRepo(),
 		)
 	}
 
 	return s.notifyService
 }
 
-func (s *serviceProvider) QrService() *service.QrService {
+func (s *serviceProvider) QrService() primary.QrService {
 	if s.qrService == nil {
 		qrSrvc, err := service.NewQrService(
 			s.Bot().Bot,
@@ -375,7 +377,7 @@ func (s *serviceProvider) QrService() *service.QrService {
 	return s.qrService
 }
 
-func (s *serviceProvider) VersionService() *service.VersionService {
+func (s *serviceProvider) VersionService() primary.VersionService {
 	if s.versionService == nil {
 		versionLogger, err := logger.Named("version")
 		if err != nil {

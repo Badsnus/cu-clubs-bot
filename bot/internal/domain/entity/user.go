@@ -1,26 +1,15 @@
 package entity
 
 import (
-	"fmt"
-	"strings"
 	"time"
+
+	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/valueobject"
 )
 
-type Role string
-
-func (r Role) String() string {
-	return string(r)
-}
-
-type Roles []Role
-
-const (
-	ExternalUser Role = "external_user"
-	GrantUser    Role = "grant_user"
-	Student      Role = "student"
+type (
+	Role  = valueobject.Role
+	Roles = valueobject.Roles
 )
-
-var AllRoles = Roles{ExternalUser, GrantUser, Student}
 
 type User struct {
 	ID            int64 `gorm:"primaryKey"`
@@ -28,9 +17,9 @@ type User struct {
 	UpdatedAt     time.Time
 	Localisation  string `gorm:"default:ru"`
 	Username      string
-	Role          Role   `gorm:"not null"`
-	Email         string `gorm:"uniqueIndex:idx_users_email,where:email <> ''"`
-	FIO           string `gorm:"not null"`
+	Role          Role              `gorm:"not null"`
+	Email         valueobject.Email `gorm:"uniqueIndex:idx_users_email,where:email <> ''"`
+	FIO           valueobject.FIO   `gorm:"not null"`
 	QRCodeID      string
 	QRFileID      string
 	IsBanned      bool            `gorm:"default:false"`
@@ -60,23 +49,14 @@ type IgnoreMailing struct {
 	CreatedAt time.Time
 }
 
-type FIO struct {
-	Surname    string
-	Name       string
-	Patronymic string
+type FIO = valueobject.FIO
+
+func (u *User) GetFIO() FIO {
+	return u.FIO
 }
 
-func (u *User) ParseFIO() (FIO, error) {
-	fioSlice := strings.Split(u.FIO, " ")
-	if len(fioSlice) < 3 {
-		return FIO{}, fmt.Errorf("invalid fio")
-	}
-
-	return FIO{
-		Surname:    fioSlice[0],
-		Name:       fioSlice[1],
-		Patronymic: strings.Join(fioSlice[2:], " "),
-	}, nil
+func (u *User) GetEmail() valueobject.Email {
+	return u.Email
 }
 
 func (u *User) IsMailingAllowed(clubID string) bool {

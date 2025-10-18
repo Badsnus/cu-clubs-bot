@@ -9,8 +9,8 @@ import (
 
 	"go.uber.org/zap/zapcore"
 
-	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/controller/telegram/bot"
-	setupBot "github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/controller/telegram/setup"
+	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/primary/telegram/bot"
+	setupBot "github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/primary/telegram/setup"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/utils/banner"
 	"github.com/Badsnus/cu-clubs-bot/bot/pkg/logger"
 )
