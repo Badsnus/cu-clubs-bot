@@ -190,7 +190,7 @@ go-build: ## 🔨 Собрать Go приложение
 
 go-run: ## ▶️ Запустить Go приложение
 	@printf "$(GREEN)$(BOLD)▶️ Запускаю Go приложение...$(RESET)\n"
-	@cd bot && go run ./cmd/bot/main.go
+	@cd bot && go run ./cmd/app/main.go
 
 go-check: go-fmt go-vet go-lint go-test ## 🔍 Запустить все проверки кода
 

@@ -11,6 +11,8 @@ import (
 	"github.com/xuri/excelize/v2"
 	tele "gopkg.in/telebot.v3"
 
+	"github.com/Badsnus/cu-clubs-bot/bot/internal/ports/secondary"
+
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/entity"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/utils/location"
 	"github.com/Badsnus/cu-clubs-bot/bot/pkg/logger/types"
@@ -35,43 +37,6 @@ type PassConfig struct {
 	CronSchedule    string
 }
 
-type PassStorage interface {
-	CreatePass(ctx context.Context, pass *entity.Pass) (*entity.Pass, error)
-	GetPass(ctx context.Context, id string) (*entity.Pass, error)
-	UpdatePass(ctx context.Context, pass *entity.Pass) (*entity.Pass, error)
-	GetPassesByEventID(ctx context.Context, eventID string) ([]entity.Pass, error)
-	GetPassesByUserID(ctx context.Context, userID int64, limit, offset int) ([]entity.Pass, error)
-	GetPendingPassesForSchedule(ctx context.Context, before time.Time) ([]entity.Pass, error)
-	MarkPassAsSent(ctx context.Context, id string, sentAt time.Time, emailSent, telegramSent bool) error
-	MarkPassesAsSent(ctx context.Context, ids []string, sentAt time.Time, emailSent, telegramSent bool) error
-	CreateBulkPasses(ctx context.Context, passes []entity.Pass) error
-
-	GetActivePassForUser(ctx context.Context, eventID string, userID int64) (*entity.Pass, error)
-	HasActivePass(ctx context.Context, eventID string, userID int64) (bool, error)
-
-	GetPassesByRequester(ctx context.Context, requesterType entity.PassRequesterType, requesterID string, limit, offset int) ([]entity.Pass, error)
-	CountPassesByRequester(ctx context.Context, requesterType entity.PassRequesterType, requesterID string) (int64, error)
-	GetPassesByEventAndRequester(ctx context.Context, eventID string, requesterType entity.PassRequesterType, requesterID string) ([]entity.Pass, error)
-}
-
-type PassEventStorage interface {
-	GetEventByID(ctx context.Context, eventID string) (*entity.Event, error)
-}
-
-type PassUserStorage interface {
-	GetManyUsersByEventIDs(ctx context.Context, eventIDs []string) ([]entity.User, error)
-	GetUserByID(ctx context.Context, userID int64) (*entity.User, error)
-	GetMany(ctx context.Context, ids []int64) ([]entity.User, error)
-}
-
-type PassClubStorage interface {
-	GetManyByIDs(ctx context.Context, clubIDs []string) ([]entity.Club, error)
-}
-
-type PassSMTPClient interface {
-	Send(to string, body, message string, subject string, file *bytes.Buffer) error
-}
-
 type EventWithPasses struct {
 	Event  entity.Event
 	Passes []entity.Pass
@@ -81,11 +46,11 @@ type PassService struct {
 	bot    *tele.Bot
 	logger *types.Logger
 
-	passStorage  PassStorage
-	eventStorage PassEventStorage
-	userStorage  PassUserStorage
-	clubStorage  PassClubStorage
-	smtpClient   PassSMTPClient
+	passRepo   secondary.PassRepository
+	eventRepo  secondary.EventRepository
+	userRepo   secondary.UserRepository
+	clubRepo   secondary.ClubRepository
+	smtpClient secondary.SMTPClient
 
 	cron             *cron.Cron
 	configs          map[string]*PassConfig
@@ -95,21 +60,21 @@ type PassService struct {
 func NewPassService(
 	bot *tele.Bot,
 	logger *types.Logger,
-	passStorage PassStorage,
-	eventStorage PassEventStorage,
-	userStorage PassUserStorage,
-	clubStorage PassClubStorage,
-	smtpClient PassSMTPClient,
+	passRepo secondary.PassRepository,
+	eventRepo secondary.EventRepository,
+	userRepo secondary.UserRepository,
+	clubRepo secondary.ClubRepository,
+	smtpClient secondary.SMTPClient,
 	passEmails []string,
 	telegramChatID int64,
 ) *PassService {
 	ps := &PassService{
 		bot:              bot,
 		logger:           logger,
-		passStorage:      passStorage,
-		eventStorage:     eventStorage,
-		userStorage:      userStorage,
-		clubStorage:      clubStorage,
+		passRepo:         passRepo,
+		eventRepo:        eventRepo,
+		userRepo:         userRepo,
+		clubRepo:         clubRepo,
 		smtpClient:       smtpClient,
 		cron:             cron.New(cron.WithLocation(location.Location())),
 		configs:          make(map[string]*PassConfig),
@@ -149,25 +114,11 @@ func NewPassService(
 	return ps
 }
 
-func (s *PassService) GetConfig(name string) *PassConfig {
+func (s *PassService) getConfig(name string) *PassConfig {
 	if config, exists := s.configs[name]; exists {
 		return config
 	}
 	return nil
-}
-
-func (s *PassService) GetConfigs() map[string]*PassConfig {
-	return s.configs
-}
-
-func (s *PassService) GetActiveConfigs() map[string]*PassConfig {
-	activeConfigs := make(map[string]*PassConfig)
-	for name, config := range s.configs {
-		if config.IsActive {
-			activeConfigs[name] = config
-		}
-	}
-	return activeConfigs
 }
 
 // CreatePassForUser создает пропуск для пользователя с проверкой на дублирование
@@ -181,7 +132,7 @@ func (s *PassService) CreatePassForUser(
 	reason string,
 	scheduledAt time.Time,
 ) (*entity.Pass, error) {
-	hasActive, err := s.passStorage.HasActivePass(ctx, eventID, userID)
+	hasActive, err := s.passRepo.HasActivePass(ctx, eventID, userID)
 	if err != nil {
 		s.logger.Errorf("Failed to check active pass for user %d, event %s: %v", userID, eventID, err)
 		return nil, fmt.Errorf("failed to check active pass: %w", err)
@@ -202,7 +153,7 @@ func (s *PassService) CreatePassForUser(
 	}
 	pass.SetRequester(requesterType, requesterID)
 
-	created, err := s.passStorage.CreatePass(ctx, pass)
+	created, err := s.passRepo.CreatePass(ctx, pass)
 	if err != nil {
 		s.logger.Errorf("Failed to create pass for user %d, event %s: %v", userID, eventID, err)
 		return nil, fmt.Errorf("failed to create pass: %w", err)
@@ -210,51 +161,6 @@ func (s *PassService) CreatePassForUser(
 
 	s.logger.Debugf("Created pass %s for user %d, event %s (type: %s, requester: %s)", created.ID, userID, eventID, passType, requesterType)
 	return created, nil
-}
-
-// CreatePassByAdmin создает пропуск вручную от имени администратора
-func (s *PassService) CreatePassByAdmin(
-	ctx context.Context,
-	eventID string,
-	userID int64,
-	adminID int64,
-	reason string,
-	scheduledAt time.Time,
-) (*entity.Pass, error) {
-	return s.CreatePassForUser(
-		ctx,
-		eventID,
-		userID,
-		entity.PassRequesterTypeAdmin,
-		adminID,
-		entity.PassTypeManual,
-		reason,
-		scheduledAt,
-	)
-}
-
-// CreatePassesByAdmin создает пропуски для нескольких пользователей от имени администратора
-func (s *PassService) CreatePassesByAdmin(
-	ctx context.Context,
-	eventID string,
-	userIDs []int64,
-	adminID int64,
-	reason string,
-	scheduledAt time.Time,
-) ([]entity.Pass, []error) {
-	var passes []entity.Pass
-	var errors []error
-
-	for _, userID := range userIDs {
-		pass, err := s.CreatePassByAdmin(ctx, eventID, userID, adminID, reason, scheduledAt)
-		if err != nil {
-			errors = append(errors, fmt.Errorf("user %d: %w", userID, err))
-			continue
-		}
-		passes = append(passes, *pass)
-	}
-
-	return passes, errors
 }
 
 // CreatePassByClub создает пропуск от имени клуба через API
@@ -302,35 +208,6 @@ func (s *PassService) CreatePassesByClub(
 	return passes, errors
 }
 
-func (s *PassService) GetPassesByEventID(ctx context.Context, eventID string) ([]entity.Pass, error) {
-	return s.passStorage.GetPassesByEventID(ctx, eventID)
-}
-
-func (s *PassService) GetPassesByUserID(ctx context.Context, userID int64, limit, offset int) ([]entity.Pass, error) {
-	return s.passStorage.GetPassesByUserID(ctx, userID, limit, offset)
-}
-
-// GetPassesByAdmin получает пропуски, созданные конкретным администратором
-func (s *PassService) GetPassesByAdmin(ctx context.Context, adminID int64, limit, offset int) ([]entity.Pass, error) {
-	requesterID := fmt.Sprintf("%d", adminID)
-	return s.passStorage.GetPassesByRequester(ctx, entity.PassRequesterTypeAdmin, requesterID, limit, offset)
-}
-
-// GetPassesByClub получает пропуски, созданные конкретным клубом
-func (s *PassService) GetPassesByClub(ctx context.Context, clubID string, limit, offset int) ([]entity.Pass, error) {
-	return s.passStorage.GetPassesByRequester(ctx, entity.PassRequesterTypeClub, clubID, limit, offset)
-}
-
-// GetActivePassForUser получает активный пропуск для пользователя и события
-func (s *PassService) GetActivePassForUser(ctx context.Context, eventID string, userID int64) (*entity.Pass, error) {
-	return s.passStorage.GetActivePassForUser(ctx, eventID, userID)
-}
-
-// HasActivePass проверяет наличие активного пропуска
-func (s *PassService) HasActivePass(ctx context.Context, eventID string, userID int64) (bool, error) {
-	return s.passStorage.HasActivePass(ctx, eventID, userID)
-}
-
 func (s *PassService) StartScheduler() error {
 	s.logger.Debug("Initializing pass scheduler...")
 
@@ -374,7 +251,7 @@ func (s *PassService) StopScheduler() {
 func (s *PassService) processPendingPasses(ctx context.Context, configName string) {
 	s.logger.Debugf("Processing pending passes for config: %s", configName)
 
-	config := s.GetConfig(configName)
+	config := s.getConfig(configName)
 	if config == nil || !config.IsActive {
 		s.logger.Debugf("Config %s not found or inactive", configName)
 		return
@@ -383,7 +260,7 @@ func (s *PassService) processPendingPasses(ctx context.Context, configName strin
 	cutoffTime := time.Now().Add(config.TimeBeforeEvent)
 	s.logger.Debugf("Looking for pending passes before: %s", cutoffTime.Format("2006-01-02 15:04:05"))
 
-	pendingPasses, err := s.passStorage.GetPendingPassesForSchedule(ctx, cutoffTime)
+	pendingPasses, err := s.passRepo.GetPendingPassesForSchedule(ctx, cutoffTime)
 	if err != nil {
 		s.logger.Error("Failed to get pending passes", "error", err)
 		return
@@ -411,7 +288,7 @@ func (s *PassService) processPendingPasses(ctx context.Context, configName strin
 			}
 		}
 		if len(passIDs) > 0 {
-			if err := s.passStorage.MarkPassesAsSent(ctx, passIDs, sentAt, emailSent, telegramSent); err != nil {
+			if err := s.passRepo.MarkPassesAsSent(ctx, passIDs, sentAt, emailSent, telegramSent); err != nil {
 				s.logger.Error("Failed to mark passes as sent", "error", err)
 			}
 		}
@@ -431,7 +308,7 @@ func (s *PassService) groupPassesByEvent(ctx context.Context, passes []entity.Pa
 		eventPassesMap[pass.EventID] = append(eventPassesMap[pass.EventID], pass)
 
 		if _, exists := eventMap[pass.EventID]; !exists {
-			event, err := s.eventStorage.GetEventByID(ctx, pass.EventID)
+			event, err := s.eventRepo.GetEventByID(ctx, pass.EventID)
 			if err != nil {
 				s.logger.Error("Failed to get event", "eventID", pass.EventID, "error", err)
 				continue
@@ -564,7 +441,7 @@ func (s *PassService) generateConsolidatedPassExcel(ctx context.Context, eventsW
 			userIDs = append(userIDs, pass.UserID)
 		}
 
-		users, err := s.userStorage.GetMany(ctx, userIDs)
+		users, err := s.userRepo.GetMany(ctx, userIDs)
 		if err != nil {
 			s.logger.Error("Failed to get users for Excel", "error", err)
 			continue
@@ -586,7 +463,7 @@ func (s *PassService) generateConsolidatedPassExcel(ctx context.Context, eventsW
 				event.StartTime.In(location.Location()).Format("02.01.2006"),
 				event.StartTime.In(location.Location()).Format("15:04"),
 				event.Location,
-				user.FIO,
+				user.FIO.String(),
 				user.Role,
 			}
 
@@ -652,68 +529,4 @@ func (s *PassService) generateEmptyPassExcel() (*bytes.Buffer, error) {
 	}
 
 	return &buf, nil
-}
-
-func (s *PassService) GetPassStatisticsForEvent(ctx context.Context, eventID string) (map[string]int, error) {
-	passes, err := s.passStorage.GetPassesByEventID(ctx, eventID)
-	if err != nil {
-		return nil, err
-	}
-
-	stats := map[string]int{
-		"total":     len(passes),
-		"pending":   0,
-		"sent":      0,
-		"cancelled": 0,
-	}
-
-	for _, pass := range passes {
-		switch pass.Status {
-		case entity.PassStatusPending:
-			stats["pending"]++
-		case entity.PassStatusSent:
-			stats["sent"]++
-		case entity.PassStatusCancelled:
-			stats["cancelled"]++
-		}
-	}
-
-	return stats, nil
-}
-
-func (s *PassService) GetSchedulerStatus() bool {
-	return s.schedulerStarted
-}
-
-func (s *PassService) GetSchedulerInfo() map[string]any {
-	info := map[string]any{
-		"status":        s.GetSchedulerStatus(),
-		"configs":       len(s.configs),
-		"activeConfigs": len(s.GetActiveConfigs()),
-	}
-
-	if s.cron != nil {
-		entries := s.cron.Entries()
-		info["scheduledJobs"] = len(entries)
-
-		var nextRuns []string
-		for _, entry := range entries {
-			nextRuns = append(nextRuns, entry.Next.Format("2006-01-02 15:04:05"))
-		}
-		info["nextRuns"] = nextRuns
-	}
-
-	configDetails := make(map[string]any)
-	for name, config := range s.configs {
-		configDetails[name] = map[string]any{
-			"active":          config.IsActive,
-			"schedule":        config.CronSchedule,
-			"timeBeforeEvent": config.TimeBeforeEvent.String(),
-			"emailRecipients": len(config.EmailRecipients),
-			"telegramChatID":  config.TelegramChatID,
-		}
-	}
-	info["configDetails"] = configDetails
-
-	return info
 }

@@ -1,85 +1,64 @@
 package service
 
 import (
-	"bytes"
 	"context"
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
 
-	"github.com/Badsnus/cu-clubs-bot/bot/pkg/smtp"
-
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/dto"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/entity"
+	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/valueobject"
+	"github.com/Badsnus/cu-clubs-bot/bot/internal/ports/secondary"
 
 	tele "gopkg.in/telebot.v3"
 )
 
-type UserStorage interface {
-	Create(ctx context.Context, user *entity.User) (*entity.User, error)
-	Get(ctx context.Context, id uint) (*entity.User, error)
-	GetByEmail(ctx context.Context, email string) (*entity.User, error)
-	GetByQRCodeID(ctx context.Context, qrCodeID string) (*entity.User, error)
-	GetMany(ctx context.Context, ids []int64) ([]entity.User, error)
-	GetAll(ctx context.Context) ([]entity.User, error)
-	GetEventUsers(ctx context.Context, eventID string) ([]dto.EventUser, error)
-	Update(ctx context.Context, user *entity.User) (*entity.User, error)
-	Count(ctx context.Context) (int64, error)
-	GetWithPagination(ctx context.Context, limit int, offset int, order string) ([]entity.User, error)
-	GetUsersByEventID(ctx context.Context, eventID string) ([]entity.User, error)
-	GetUsersByClubID(ctx context.Context, clubID string) ([]entity.User, error)
-	IgnoreMailing(ctx context.Context, userID int64, clubID string) (bool, error)
-}
-
-type smtpClient interface {
-	Send(to string, body, message string, subject string, file *bytes.Buffer) error
-}
-
-type eventParticipantStorage interface {
-	GetUserEvents(ctx context.Context, userID int64, limit, offset int) ([]dto.UserEvent, error)
-	CountUserEvents(ctx context.Context, userID int64) (int64, error)
-}
-
 type UserService struct {
-	userStorage             UserStorage
-	eventParticipantStorage eventParticipantStorage
-	smtpClient              smtpClient
+	userRepo             secondary.UserRepository
+	eventParticipantRepo secondary.EventParticipantRepository
+	smtpClient           secondary.SMTPClient
 
 	emailHTMLFilePath string
 }
 
-func NewUserService(userStorage UserStorage, eventParticipantStorage eventParticipantStorage, smtpClient smtpClient, emailHTMLFilePath string) *UserService {
+func NewUserService(
+	userRepo secondary.UserRepository,
+	eventParticipantRepo secondary.EventParticipantRepository,
+	smtpClient secondary.SMTPClient,
+	emailHTMLFilePath string,
+) *UserService {
 	return &UserService{
-		userStorage:             userStorage,
-		eventParticipantStorage: eventParticipantStorage,
-		smtpClient:              smtpClient,
+		userRepo:             userRepo,
+		eventParticipantRepo: eventParticipantRepo,
+		smtpClient:           smtpClient,
 
 		emailHTMLFilePath: emailHTMLFilePath,
 	}
 }
 
 func (s *UserService) Create(ctx context.Context, user entity.User) (*entity.User, error) {
-	return s.userStorage.Create(ctx, &user)
+	return s.userRepo.Create(ctx, &user)
 }
 
 func (s *UserService) Get(ctx context.Context, userID int64) (*entity.User, error) {
-	return s.userStorage.Get(ctx, uint(userID))
+	return s.userRepo.Get(ctx, uint(userID))
 }
 
-func (s *UserService) GetByEmail(ctx context.Context, email string) (*entity.User, error) {
-	return s.userStorage.GetByEmail(ctx, email)
+func (s *UserService) GetByEmail(ctx context.Context, email valueobject.Email) (*entity.User, error) {
+	return s.userRepo.GetByEmail(ctx, email)
 }
 
 func (s *UserService) GetByQRCodeID(ctx context.Context, qrCodeID string) (*entity.User, error) {
-	return s.userStorage.GetByQRCodeID(ctx, qrCodeID)
+	return s.userRepo.GetByQRCodeID(ctx, qrCodeID)
 }
 
 func (s *UserService) GetAll(ctx context.Context) ([]entity.User, error) {
-	return s.userStorage.GetAll(ctx)
+	return s.userRepo.GetAll(ctx)
 }
 
 func (s *UserService) Update(ctx context.Context, user *entity.User) (*entity.User, error) {
-	return s.userStorage.Update(ctx, user)
+	return s.userRepo.Update(ctx, user)
 }
 
 func (s *UserService) UpdateData(ctx context.Context, c tele.Context) (*entity.User, error) {
@@ -89,15 +68,15 @@ func (s *UserService) UpdateData(ctx context.Context, c tele.Context) (*entity.U
 	}
 	user.ID = c.Sender().ID
 
-	return s.userStorage.Update(ctx, user)
+	return s.userRepo.Update(ctx, user)
 }
 
 func (s *UserService) Count(ctx context.Context) (int64, error) {
-	return s.userStorage.Count(ctx)
+	return s.userRepo.Count(ctx)
 }
 
 func (s *UserService) GetWithPagination(ctx context.Context, limit int, offset int, order string) ([]entity.User, error) {
-	return s.userStorage.GetWithPagination(ctx, limit, offset, order)
+	return s.userRepo.GetWithPagination(ctx, limit, offset, order)
 }
 
 func (s *UserService) Ban(ctx context.Context, userID int64) (*entity.User, error) {
@@ -111,39 +90,39 @@ func (s *UserService) Ban(ctx context.Context, userID int64) (*entity.User, erro
 }
 
 func (s *UserService) GetUsersByEventID(ctx context.Context, eventID string) ([]entity.User, error) {
-	return s.userStorage.GetUsersByEventID(ctx, eventID)
+	return s.userRepo.GetUsersByEventID(ctx, eventID)
 }
 
 func (s *UserService) GetEventUsers(ctx context.Context, eventID string) ([]dto.EventUser, error) {
-	return s.userStorage.GetEventUsers(ctx, eventID)
+	return s.userRepo.GetEventUsers(ctx, eventID)
 }
 
 func (s *UserService) GetUsersByClubID(ctx context.Context, clubID string) ([]entity.User, error) {
-	return s.userStorage.GetUsersByClubID(ctx, clubID)
+	return s.userRepo.GetUsersByClubID(ctx, clubID)
 }
 
 func (s *UserService) GetUserEvents(ctx context.Context, userID int64, limit, offset int) ([]dto.UserEvent, error) {
-	return s.eventParticipantStorage.GetUserEvents(ctx, userID, limit, offset)
+	return s.eventParticipantRepo.GetUserEvents(ctx, userID, limit, offset)
 }
 
 func (s *UserService) CountUserEvents(ctx context.Context, userID int64) (int64, error) {
-	return s.eventParticipantStorage.CountUserEvents(ctx, userID)
+	return s.eventParticipantRepo.CountUserEvents(ctx, userID)
 }
 
-func (s *UserService) SendAuthCode(_ context.Context, email string, botUserName string) (code string, err error) {
+func (s *UserService) SendAuthCode(_ context.Context, email valueobject.Email, botUserName string) (code string, err error) {
 	link, code, err := generateAuthLink(12, botUserName)
 	if err != nil {
 		return "", err
 	}
 
-	message, err := smtp.GenerateEmailConfirmationMessage(s.emailHTMLFilePath, map[string]string{
+	message, err := s.smtpClient.GenerateEmailConfirmationMessage(s.emailHTMLFilePath, map[string]string{
 		"AuthLink": link,
 	})
 	if err != nil {
 		return "", err
 	}
 
-	if err := s.smtpClient.Send(email, "Email confirmation", message, "Email confirmation", nil); err != nil {
+	if err := s.smtpClient.Send(email.String(), "Email confirmation", message, "Email confirmation", nil); err != nil {
 		return "", fmt.Errorf("failed to send email: %w", err)
 	}
 
@@ -152,14 +131,14 @@ func (s *UserService) SendAuthCode(_ context.Context, email string, botUserName 
 
 // IgnoreMailing is a function that allows or disallows mailing for a user (returns error and new state)
 func (s *UserService) IgnoreMailing(ctx context.Context, userID int64, clubID string) (bool, error) {
-	return s.userStorage.IgnoreMailing(ctx, userID, clubID)
+	return s.userRepo.IgnoreMailing(ctx, userID, clubID)
 }
 
 func (s *UserService) ChangeRole(
 	ctx context.Context,
 	userID int64,
 	role entity.Role,
-	email string,
+	email valueobject.Email,
 ) error {
 	user, err := s.Get(ctx, userID)
 	if err != nil {

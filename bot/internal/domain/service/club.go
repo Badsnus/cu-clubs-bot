@@ -6,70 +6,59 @@ import (
 	tele "gopkg.in/telebot.v3"
 
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/entity"
+	"github.com/Badsnus/cu-clubs-bot/bot/internal/ports/secondary"
 )
 
-type ClubStorage interface {
-	Create(ctx context.Context, club *entity.Club) (*entity.Club, error)
-	GetWithPagination(ctx context.Context, limit, offset int, order string) ([]entity.Club, error)
-	Get(ctx context.Context, id string) (*entity.Club, error)
-	GetByOwnerID(ctx context.Context, id int64) ([]entity.Club, error)
-	Update(ctx context.Context, club *entity.Club) (*entity.Club, error)
-	Delete(ctx context.Context, id string) error
-	Count(ctx context.Context) (int64, error)
-	CountByShouldShow(ctx context.Context, shouldShow bool) (int64, error)
-	GetByShouldShowWithPagination(ctx context.Context, shouldShow bool, limit, offset int, order string) ([]entity.Club, error)
-}
-
 type ClubService struct {
-	bot     *tele.Bot
-	storage ClubStorage
+	bot  *tele.Bot
+	repo secondary.ClubRepository
 }
 
-func NewClubService(bot *tele.Bot, storage ClubStorage) *ClubService {
+func NewClubService(bot *tele.Bot, storage secondary.ClubRepository) *ClubService {
 	return &ClubService{
-		bot:     bot,
-		storage: storage,
+		bot:  bot,
+		repo: storage,
 	}
 }
 
 func (s *ClubService) Create(ctx context.Context, club *entity.Club) (*entity.Club, error) {
-	return s.storage.Create(ctx, club)
+	return s.repo.Create(ctx, club)
 }
 
 func (s *ClubService) GetWithPagination(ctx context.Context, limit, offset int, order string) ([]entity.Club, error) {
-	return s.storage.GetWithPagination(ctx, limit, offset, order)
+	return s.repo.GetWithPagination(ctx, limit, offset, order)
 }
 
 func (s *ClubService) Get(ctx context.Context, id string) (*entity.Club, error) {
-	return s.storage.Get(ctx, id)
+	return s.repo.Get(ctx, id)
 }
 
 func (s *ClubService) GetByOwnerID(ctx context.Context, id int64) ([]entity.Club, error) {
-	return s.storage.GetByOwnerID(ctx, id)
+	return s.repo.GetByOwnerID(ctx, id)
 }
 
 func (s *ClubService) CountByShouldShow(ctx context.Context, shouldShow bool) (int64, error) {
-	return s.storage.CountByShouldShow(ctx, shouldShow)
+	return s.repo.CountByShouldShow(ctx, shouldShow)
 }
 
 func (s *ClubService) GetByShouldShowWithPagination(ctx context.Context, shouldShow bool, limit, offset int, order string) ([]entity.Club, error) {
-	return s.storage.GetByShouldShowWithPagination(ctx, shouldShow, limit, offset, order)
+	return s.repo.GetByShouldShowWithPagination(ctx, shouldShow, limit, offset, order)
 }
 
 func (s *ClubService) Update(ctx context.Context, club *entity.Club) (*entity.Club, error) {
-	return s.storage.Update(ctx, club)
+	return s.repo.Update(ctx, club)
 }
 
 func (s *ClubService) Delete(ctx context.Context, id string) error {
-	return s.storage.Delete(ctx, id)
+	return s.repo.Delete(ctx, id)
 }
 
 func (s *ClubService) Count(ctx context.Context) (int64, error) {
-	return s.storage.Count(ctx)
+	return s.repo.Count(ctx)
 }
 
 func (s *ClubService) GetAvatar(ctx context.Context, id string) (*tele.File, error) {
-	club, err := s.storage.Get(ctx, id)
+	club, err := s.repo.Get(ctx, id)
 	if err != nil {
 		return nil, err
 	}
@@ -87,7 +76,7 @@ func (s *ClubService) GetAvatar(ctx context.Context, id string) (*tele.File, err
 }
 
 func (s *ClubService) GetIntro(ctx context.Context, id string) (*tele.File, error) {
-	club, err := s.storage.Get(ctx, id)
+	club, err := s.repo.Get(ctx, id)
 	if err != nil {
 		return nil, err
 	}

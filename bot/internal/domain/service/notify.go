@@ -6,8 +6,9 @@ import (
 	"time"
 
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/utils/location"
+	"github.com/Badsnus/cu-clubs-bot/bot/internal/ports/primary"
+	"github.com/Badsnus/cu-clubs-bot/bot/internal/ports/secondary"
 
-	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/dto"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/entity"
 
 	"go.uber.org/zap/zapcore"
@@ -17,28 +18,11 @@ import (
 	"github.com/Badsnus/cu-clubs-bot/bot/pkg/logger/types"
 )
 
-type clubOwnerService interface {
-	GetByClubID(ctx context.Context, clubID string) ([]dto.ClubOwner, error)
-}
-
-type eventStorage interface {
-	GetUpcomingEvents(ctx context.Context, before time.Time) ([]entity.Event, error)
-}
-
-type notificationStorage interface {
-	Create(ctx context.Context, notification *entity.EventNotification) error
-	GetUnnotifiedUsers(ctx context.Context, eventID string, notificationType entity.NotificationType) ([]entity.EventParticipant, error)
-}
-
-type notifyEventParticipantStorage interface {
-	GetByEventID(ctx context.Context, eventID string) ([]entity.EventParticipant, error)
-}
-
 type NotifyService struct {
-	clubOwnerService              clubOwnerService
-	eventStorage                  eventStorage
-	notificationStorage           notificationStorage
-	notifyEventParticipantStorage notifyEventParticipantStorage
+	clubOwnerService     primary.ClubOwnerService
+	eventRepo            secondary.EventRepository
+	notificationRepo     secondary.NotificationRepository
+	eventParticipantRepo secondary.EventParticipantRepository
 
 	bot    *tele.Bot
 	layout *layout.Layout
@@ -49,19 +33,19 @@ func NewNotifyService(
 	bot *tele.Bot,
 	layout *layout.Layout,
 	logger *types.Logger,
-	clubOwnerService clubOwnerService,
-	eventStorage eventStorage,
-	notificationStorage notificationStorage,
-	notifyEventParticipantStorage notifyEventParticipantStorage,
+	clubOwnerService primary.ClubOwnerService,
+	eventRepo secondary.EventRepository,
+	notificationRepo secondary.NotificationRepository,
+	notifyEventParticipantRepo secondary.EventParticipantRepository,
 ) *NotifyService {
 	return &NotifyService{
-		clubOwnerService:              clubOwnerService,
-		eventStorage:                  eventStorage,
-		notificationStorage:           notificationStorage,
-		notifyEventParticipantStorage: notifyEventParticipantStorage,
-		bot:                           bot,
-		layout:                        layout,
-		logger:                        logger,
+		clubOwnerService:     clubOwnerService,
+		eventRepo:            eventRepo,
+		notificationRepo:     notificationRepo,
+		eventParticipantRepo: notifyEventParticipantRepo,
+		bot:                  bot,
+		layout:               layout,
+		logger:               logger,
 	}
 }
 
@@ -114,7 +98,7 @@ func (s *NotifyService) SendClubWarning(clubID string, what interface{}, opts ..
 }
 
 func (s *NotifyService) SendEventUpdate(eventID string, what interface{}, opts ...interface{}) error {
-	participants, err := s.notifyEventParticipantStorage.GetByEventID(context.Background(), eventID)
+	participants, err := s.eventParticipantRepo.GetByEventID(context.Background(), eventID)
 	if err != nil {
 		return err
 	}
@@ -160,7 +144,7 @@ func (s *NotifyService) checkAndNotify(ctx context.Context) {
 	now := time.Now().In(location.Location())
 
 	// Get events starting in the next 25 hours (to cover both day and hour notifications)
-	events, err := s.eventStorage.GetUpcomingEvents(ctx, now.Add(25*time.Hour))
+	events, err := s.eventRepo.GetUpcomingEvents(ctx, now.Add(25*time.Hour))
 	if err != nil {
 		s.logger.Errorf("failed to get upcoming events: %v", err)
 		return
@@ -187,7 +171,7 @@ func (s *NotifyService) checkAndNotify(ctx context.Context) {
 // sendNotifications sends notifications to users that have not been notified
 func (s *NotifyService) sendNotifications(ctx context.Context, event entity.Event, notificationType entity.NotificationType) {
 	// Get users who haven't been notified yet
-	participants, err := s.notificationStorage.GetUnnotifiedUsers(ctx, event.ID, notificationType)
+	participants, err := s.notificationRepo.GetUnnotifiedUsers(ctx, event.ID, notificationType)
 	if err != nil {
 		s.logger.Errorf("failed to get unnotified users for event %s: %v", event.ID, err)
 		return
@@ -233,7 +217,7 @@ func (s *NotifyService) sendNotifications(ctx context.Context, event entity.Even
 			Type:    notificationType,
 		}
 
-		if err := s.notificationStorage.Create(ctx, notification); err != nil {
+		if err := s.notificationRepo.Create(ctx, notification); err != nil {
 			s.logger.Errorf("failed to create notification record: %v", err)
 		}
 	}

@@ -8,30 +8,28 @@ import (
 	"github.com/google/uuid"
 	tele "gopkg.in/telebot.v3"
 
-	"github.com/Badsnus/cu-clubs-bot/bot/internal/domain/entity"
+	"github.com/Badsnus/cu-clubs-bot/bot/internal/ports/primary"
+
 	qr "github.com/Badsnus/cu-clubs-bot/bot/pkg/qrcode"
 )
 
-type qrUserService interface {
-	Get(ctx context.Context, userID int64) (*entity.User, error)
-	Update(ctx context.Context, user *entity.User) (*entity.User, error)
-}
-
-type qrEventService interface {
-	Get(ctx context.Context, eventID string) (*entity.Event, error)
-	Update(ctx context.Context, event *entity.Event) (*entity.Event, error)
-}
-
 type QrService struct {
-	userService  qrUserService
-	eventService qrEventService
+	userService  primary.UserService
+	eventService primary.EventService
 	bot          *tele.Bot
 	qrChat       *tele.Chat
 	qrCFG        qr.Config
 	botName      string
 }
 
-func NewQrService(bot *tele.Bot, qrCFG qr.Config, userService qrUserService, eventService qrEventService, qrChatID int64, logoPath string) (*QrService, error) {
+func NewQrService(
+	bot *tele.Bot,
+	qrCFG qr.Config,
+	userService primary.UserService,
+	eventService primary.EventService,
+	qrChatID int64,
+	logoPath string,
+) (*QrService, error) {
 	chat, err := bot.ChatByID(qrChatID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get qr chat: %w", err)
