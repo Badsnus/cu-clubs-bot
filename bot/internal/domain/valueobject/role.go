@@ -1,5 +1,10 @@
 package valueobject
 
+import (
+	"database/sql/driver"
+	"fmt"
+)
+
 // Role represents a user role in the system
 type Role string
 
@@ -13,6 +18,36 @@ func (r Role) IsValid() bool {
 		return true
 	default:
 		return false
+	}
+}
+
+// Value implements driver.Valuer interface for Ent.
+func (r Role) Value() (driver.Value, error) {
+	return r.String(), nil
+}
+
+// Scan implements sql.Scanner interface for Ent.
+func (r *Role) Scan(value interface{}) error {
+	if value == nil {
+		*r = ""
+		return nil
+	}
+
+	switch v := value.(type) {
+	case string:
+		*r = Role(v)
+		if !r.IsValid() {
+			return fmt.Errorf("invalid role value: %s", v)
+		}
+		return nil
+	case []byte:
+		*r = Role(v)
+		if !r.IsValid() {
+			return fmt.Errorf("invalid role value: %s", v)
+		}
+		return nil
+	default:
+		return fmt.Errorf("cannot scan %T into Role", value)
 	}
 }
 
@@ -45,4 +80,12 @@ func (r Roles) Strings() []string {
 // AllRoles returns all available roles in the system
 func AllRoles() Roles {
 	return Roles{ExternalUser, GrantUser, Student}
+}
+
+// Values provides list valid values for Enum.
+func (Role) Values() (kinds []string) {
+	for _, s := range AllRoles() {
+		kinds = append(kinds, s.String())
+	}
+	return kinds
 }

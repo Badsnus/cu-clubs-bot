@@ -7,6 +7,10 @@ import (
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/app"
 
 	_ "time/tzdata"
+
+	_ "github.com/lib/pq"
+
+	_ "github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/secondary/postgres/ent/runtime"
 )
 
 func main() {

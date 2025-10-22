@@ -53,6 +53,9 @@ func (a *App) Run() {
 		adminIDs,
 	)
 
+	// TODO: remove
+	_ = a.serviceProvider.EntClient()
+
 	// Setup signal handling
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)

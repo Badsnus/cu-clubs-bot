@@ -76,44 +76,37 @@ func (f FIO) validate() error {
 	return nil
 }
 
-// Value implements driver.Valuer interface for GORM
+// Value implements driver.Valuer interface for Ent.
 func (f FIO) Value() (driver.Value, error) {
-	if f.Surname == "" && f.Name == "" && f.Patronymic == "" {
-		return "", nil
-	}
-
-	// Return as string format "Surname Name Patronymic"
 	return f.String(), nil
 }
 
-// Scan implements sql.Scanner interface for GORM
+// Scan implements sql.Scanner interface for Ent.
 func (f *FIO) Scan(value interface{}) error {
 	if value == nil {
 		*f = FIO{}
 		return nil
 	}
 
-	var str string
+	var fioStr string
 	switch v := value.(type) {
 	case string:
-		str = v
+		fioStr = v
 	case []byte:
-		str = string(v)
+		fioStr = string(v)
 	default:
 		return fmt.Errorf("cannot scan %T into FIO", value)
 	}
 
-	// Parse as string format "Surname Name Patronymic"
-	fio, err := NewFIOFromString(str)
+	if fioStr == "" {
+		*f = FIO{}
+		return nil
+	}
+
+	fio, err := NewFIOFromString(fioStr)
 	if err != nil {
-		return fmt.Errorf("failed to parse FIO string '%s': %w", str, err)
+		return err
 	}
-
-	// Validate the FIO
-	if err := fio.validate(); err != nil {
-		return fmt.Errorf("invalid FIO data from database: %w", err)
-	}
-
 	*f = fio
 	return nil
 }

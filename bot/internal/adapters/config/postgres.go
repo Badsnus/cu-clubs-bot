@@ -8,6 +8,7 @@ import (
 
 type PGConfig interface {
 	DSN() string
+	EntDSN() string
 }
 
 type pgConfig struct {
@@ -34,6 +35,20 @@ func NewPGConfig() PGConfig {
 
 func (cfg *pgConfig) DSN() string {
 	return fmt.Sprintf("user=%s password=%s dbname=%s host=%s port=%d sslmode=%s TimeZone=%s",
+		cfg.user,
+		cfg.password,
+		cfg.dbName,
+		cfg.host,
+		cfg.port,
+		cfg.sslMode,
+		cfg.timeZone,
+	)
+}
+
+func (cfg *pgConfig) EntDSN() string {
+	// Temporarily hardcode a different database name for Entgo to avoid conflicts with GORM
+	// TODO: Configure this properly in config.yaml
+	return fmt.Sprintf("user=%s password=%s dbname=%s_ent host=%s port=%d sslmode=%s TimeZone=%s",
 		cfg.user,
 		cfg.password,
 		cfg.dbName,

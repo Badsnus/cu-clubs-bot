@@ -1,6 +1,7 @@
 package app
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"os"
@@ -11,6 +12,7 @@ import (
 	"gorm.io/gorm"
 	gormLogger "gorm.io/gorm/logger"
 
+	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/secondary/postgres/ent"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/secondary/smtp"
 	"github.com/Badsnus/cu-clubs-bot/bot/internal/ports/secondary"
 
@@ -36,6 +38,7 @@ type serviceProvider struct {
 
 	// Infrastructure
 	db          *gorm.DB
+	entClient   *ent.Client
 	redisClient *redis.Client
 	smtpDialer  *gomail.Dialer
 	smtpClient  secondary.SMTPClient
@@ -149,6 +152,29 @@ func (s *serviceProvider) DB() *gorm.DB {
 	}
 
 	return s.db
+}
+
+func (s *serviceProvider) EntClient() *ent.Client {
+	if s.entClient == nil {
+		// Use separate DSN for Entgo to avoid conflicts with GORM
+		dsn := s.cfg.PG.EntDSN()
+
+		client, err := ent.Open("postgres", dsn)
+		if err != nil {
+			panic(fmt.Errorf("failed to connect to the database with Ent: %w", err))
+		}
+		logger.Log.Info("Successfully connected to the database with Ent")
+
+		// Run migrations
+		if err := client.Schema.Create(context.Background()); err != nil {
+			panic(fmt.Errorf("failed to run Ent migrations: %w", err))
+		}
+		logger.Log.Info("Ent database schema created/migrated")
+
+		s.entClient = client
+	}
+
+	return s.entClient
 }
 
 func (s *serviceProvider) RedisClient() *redis.Client {

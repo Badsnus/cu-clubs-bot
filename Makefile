@@ -195,6 +195,31 @@ go-run: ## ▶️ Запустить Go приложение
 go-check: go-fmt go-vet go-lint go-test ## 🔍 Запустить все проверки кода
 
 # ================================================================================================
+# 🏗️ ENT ORM ГЕНЕРАЦИЯ
+# ================================================================================================
+
+.PHONY: ent-gen ent-gen-fmt ent-schema
+
+ent-gen: ## 🔄 Сгенерировать код из схем Ent
+	@printf "$(BLUE)$(BOLD)🔄 Генерирую код из схем Ent...$(RESET)\n"
+	@test -f "$$(go env GOPATH)/bin/goimports" || { printf "$(RED)❌ goimports не найден. Запустите: make install-tools$(RESET)\n"; exit 1; }
+	@test -f "$$(go env GOPATH)/bin/gofumpt" || { printf "$(RED)❌ gofumpt не найден. Запустите: make install-tools$(RESET)\n"; exit 1; }
+	@cd bot/internal/adapters/secondary/postgres && go generate ./ent
+	@cd bot/internal/adapters/secondary/postgres && $$(go env GOPATH)/bin/gofumpt -l -w ./ent
+	@cd bot/internal/adapters/secondary/postgres && $$(go env GOPATH)/bin/goimports -w -local github.com/Badsnus/cu-clubs-bot ./ent
+	@printf "$(GREEN)✅ Код сгенерирован из схем Ent$(RESET)\n"
+
+ent-gen-fmt: ## 🎨 Отформатировать сгенерированный код Ent
+	@printf "$(BLUE)$(BOLD)🎨 Форматирую сгенерированный код Ent...$(RESET)\n"
+	@test -f "$$(go env GOPATH)/bin/goimports" || { printf "$(RED)❌ goimports не найден. Запустите: make install-tools$(RESET)\n"; exit 1; }
+	@test -f "$$(go env GOPATH)/bin/gofumpt" || { printf "$(RED)❌ gofumpt не найден. Запустите: make install-tools$(RESET)\n"; exit 1; }
+	@cd bot/internal/adapters/secondary/postgres && $$(go env GOPATH)/bin/gofumpt -l -w ./ent
+	@cd bot/internal/adapters/secondary/postgres && $$(go env GOPATH)/bin/goimports -w -local github.com/Badsnus/cu-clubs-bot ./ent
+	@printf "$(GREEN)✅ Код Ent отформатирован$(RESET)\n"
+
+ent-schema: ent-gen ent-gen-fmt ## 🔄 Полная генерация схем Ent (генерация + форматирование)
+
+# ================================================================================================
 # 🛠️ ИНСТРУМЕНТЫ
 # ================================================================================================
 
