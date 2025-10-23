@@ -257,8 +257,15 @@ func (s *PassService) processPendingPasses(ctx context.Context, configName strin
 		return
 	}
 
-	cutoffTime := time.Now().Add(config.TimeBeforeEvent)
-	s.logger.Debugf("Looking for pending passes before: %s", cutoffTime.Format("2006-01-02 15:04:05"))
+	now := time.Now()
+	cutoffTime := now.Add(config.TimeBeforeEvent)
+
+	// 🔍 DEBUG LOG: Detailed scheduling info
+	s.logger.Infof("🔍 [processPendingPasses] Config: %s", configName)
+	s.logger.Infof("   ⏰ Current time: %s (weekday: %s)", now.Format("2006-01-02 15:04:05"), now.Weekday().String())
+	s.logger.Infof("   📊 TimeBeforeEvent: %v hours", config.TimeBeforeEvent.Hours())
+	s.logger.Infof("   📅 cutoffTime: %s (weekday: %s)", cutoffTime.Format("2006-01-02 15:04:05"), cutoffTime.Weekday().String())
+	s.logger.Infof("   🔎 Query: SELECT * FROM passes WHERE status='pending' AND scheduled_at <= '%s'", cutoffTime.Format("2006-01-02 15:04:05"))
 
 	pendingPasses, err := s.passRepo.GetPendingPassesForSchedule(ctx, cutoffTime)
 	if err != nil {
@@ -266,7 +273,23 @@ func (s *PassService) processPendingPasses(ctx context.Context, configName strin
 		return
 	}
 
-	s.logger.Debugf("Found %d pending passes", len(pendingPasses))
+	s.logger.Infof("   ✅ Found %d pending passes", len(pendingPasses))
+
+	// 🔍 DEBUG LOG: Show details for each pass
+	for i, pass := range pendingPasses {
+		event, err := s.eventRepo.GetEventByID(ctx, pass.EventID)
+		if err != nil {
+			s.logger.Errorf("   ❌ Pass #%d: Failed to get event %s", i+1, pass.EventID)
+			continue
+		}
+		s.logger.Infof("   📋 Pass #%d: Event '%s' on %s (%s), scheduled_at=%s",
+			i+1,
+			event.Name,
+			event.StartTime.Format("2006-01-02 15:04"),
+			event.StartTime.Weekday().String(),
+			pass.ScheduledAt.Format("2006-01-02 15:04:05"))
+	}
+	s.logger.Infof("")
 
 	var eventsWithPasses []EventWithPasses
 	if len(pendingPasses) > 0 {

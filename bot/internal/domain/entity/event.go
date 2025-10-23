@@ -69,6 +69,11 @@ func (e *Event) CalculateScheduledAt() time.Time {
 	loc := location.Location()
 	st := e.StartTime.In(loc)
 
+	// 🔍 DEBUG LOG: Event details
+	eventDow := st.Weekday()
+	fmt.Printf("🔍 [CalculateScheduledAt] Event: %s\n", e.Name)
+	fmt.Printf("   📅 Event StartTime: %s (weekday: %s)\n", st.Format("2006-01-02 15:04:05"), eventDow.String())
+
 	// Determine timeBeforeEvent based on event day
 	var timeBeforeEvent time.Duration
 	dow := st.Weekday()
@@ -77,19 +82,32 @@ func (e *Event) CalculateScheduledAt() time.Time {
 	} else {
 		timeBeforeEvent = 48 * time.Hour
 	}
+	fmt.Printf("   ⏰ timeBeforeEvent: %v hours\n", timeBeforeEvent.Hours())
 
 	// Calculate send day
 	sendDay := st.Add(-timeBeforeEvent)
+	fmt.Printf("   📤 sendDay (after -timeBeforeEvent): %s\n", sendDay.Format("2006-01-02 15:04:05"))
 
 	// Determine send time based on send day
 	sendDow := sendDay.Weekday()
+	fmt.Printf("   📆 sendDay weekday: %s\n", sendDow.String())
+
 	var sendHour int
 	if sendDow >= time.Monday && sendDow <= time.Friday {
 		sendHour = 16 // Weekdays 16:00
+		fmt.Printf("   🕐 sendHour: 16:00 (weekday)\n")
 	} else {
 		sendHour = 12 // Weekends 12:00
+		fmt.Printf("   🕐 sendHour: 12:00 (weekend)\n")
 	}
 
 	// Return the send time
-	return time.Date(sendDay.Year(), sendDay.Month(), sendDay.Day(), sendHour, 0, 0, 0, loc)
+	scheduledAt := time.Date(sendDay.Year(), sendDay.Month(), sendDay.Day(), sendHour, 0, 0, 0, loc)
+	fmt.Printf("   ✅ RESULT scheduled_at: %s\n", scheduledAt.Format("2006-01-02 15:04:05"))
+	fmt.Printf("   ❗ PROBLEM CHECK:\n")
+	fmt.Printf("      - Event on Sunday → should send on Saturday 12:00\n")
+	fmt.Printf("      - Event on Monday → should send on Saturday 12:00\n")
+	fmt.Printf("      - Event on Tue-Sat → should send day before at 16:00\n\n")
+
+	return scheduledAt
 }
