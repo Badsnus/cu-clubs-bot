@@ -7,8 +7,10 @@ import (
 	"time"
 
 	"entgo.io/ent"
+	"entgo.io/ent/dialect/entsql"
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/schema/field"
+	"entgo.io/ent/schema/index"
 	"entgo.io/ent/schema/mixin"
 
 	gen "github.com/Badsnus/cu-clubs-bot/bot/internal/adapters/secondary/postgres/ent"
@@ -30,6 +32,16 @@ func (SoftDeleteMixin) Fields() []ent.Field {
 	return []ent.Field{
 		field.Time("deleted_at").
 			Optional(),
+	}
+}
+
+// Indexes of the SoftDeleteMixin.
+func (SoftDeleteMixin) Indexes() []ent.Index {
+	return []ent.Index{
+		index.Fields("deleted_at").
+			Annotations(entsql.IndexAnnotation{
+				Where: "deleted_at IS NULL",
+			}),
 	}
 }
 

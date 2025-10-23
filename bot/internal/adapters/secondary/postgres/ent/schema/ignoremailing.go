@@ -45,14 +45,14 @@ func (IgnoreMailing) Edges() []ent.Edge {
 			Unique().
 			Required().
 			Field("user_id").
-			Annotations(entsql.OnDelete(entsql.Cascade)), // Hard delete при удалении User
+			Annotations(entsql.OnDelete(entsql.Cascade)),
 
 		edge.From("club", Club.Type).
 			Ref("ignore_mailings").
 			Unique().
 			Required().
 			Field("club_id"),
-		// Убрали CASCADE - теперь управляется через soft delete hook
+		// Удаление управляется через soft delete hook
 	}
 }
 

@@ -122,11 +122,6 @@ func (Event) Indexes() []ent.Index {
 				Type: "GIN",
 			}),
 
-		index.Fields("deleted_at").
-			Annotations(entsql.IndexAnnotation{
-				Where: "deleted_at IS NULL",
-			}),
-
 		index.Fields("registration_end_time"),
 	}
 }

@@ -48,7 +48,7 @@ func (ClubOwner) Edges() []ent.Edge {
 			Required().
 			Unique().
 			Field("user_id").
-			Annotations(entsql.OnDelete(entsql.Cascade)), // Hard delete при удалении User
+			Annotations(entsql.OnDelete(entsql.Cascade)),
 
 		edge.To("club", Club.Type).
 			Required().

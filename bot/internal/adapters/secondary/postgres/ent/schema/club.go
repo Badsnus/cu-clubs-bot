@@ -97,11 +97,6 @@ func (Club) Indexes() []ent.Index {
 	return []ent.Index{
 		index.Fields("visible_in_tour"),
 
-		index.Fields("deleted_at").
-			Annotations(entsql.IndexAnnotation{
-				Where: "deleted_at IS NULL",
-			}),
-
 		index.Fields("allowed_roles").
 			Annotations(entsql.IndexAnnotation{
 				Type: "GIN",

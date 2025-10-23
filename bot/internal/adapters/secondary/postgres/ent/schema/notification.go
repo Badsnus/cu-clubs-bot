@@ -47,13 +47,13 @@ func (Notification) Edges() []ent.Edge {
 			Field("event_id").
 			Required().
 			Unique(),
-		// Убрали CASCADE - теперь управляется через soft delete hook
+		// Удаление управляется через soft delete hook
 
 		edge.To("user", User.Type).
 			Field("user_id").
 			Required().
 			Unique().
-			Annotations(entsql.OnDelete(entsql.Cascade)), // Hard delete при удалении User
+			Annotations(entsql.OnDelete(entsql.Cascade)),
 	}
 }
 
