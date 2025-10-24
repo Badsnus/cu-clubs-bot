@@ -65,31 +65,43 @@ func (e *Event) IsPassRequiredForUser(user *User, excludedRoles []string) bool {
 }
 
 // CalculateScheduledAt calculates the scheduled time for pass sending based on cron schedule
+//
+// Правила отправки:
+// - События в Воскресенье или Понедельник → отправка в предыдущую Субботу 12:00
+// - События во Вторник-Пятницу → отправка в предыдущий день 16:00
+// - События в Субботу → отправка в Пятницу 16:00
 func (e *Event) CalculateScheduledAt() time.Time {
 	loc := location.Location()
-	st := e.StartTime.In(loc)
+	eventStart := e.StartTime.In(loc)
+	eventWeekday := eventStart.Weekday()
 
-	// Determine timeBeforeEvent based on event day
-	var timeBeforeEvent time.Duration
-	dow := st.Weekday()
-	if dow >= time.Monday && dow <= time.Friday {
-		timeBeforeEvent = 24 * time.Hour
-	} else {
-		timeBeforeEvent = 48 * time.Hour
+	var scheduledAt time.Time
+
+	switch eventWeekday {
+	case time.Sunday:
+		// Воскресенье → отправка в Субботу 12:00
+		daysToSubtract := 1
+		sendDay := eventStart.AddDate(0, 0, -daysToSubtract)
+		scheduledAt = time.Date(sendDay.Year(), sendDay.Month(), sendDay.Day(), 12, 0, 0, 0, loc)
+
+	case time.Monday:
+		// Понедельник → отправка в Субботу 12:00
+		daysToSubtract := 2
+		sendDay := eventStart.AddDate(0, 0, -daysToSubtract)
+		scheduledAt = time.Date(sendDay.Year(), sendDay.Month(), sendDay.Day(), 12, 0, 0, 0, loc)
+
+	case time.Saturday:
+		// Суббота → отправка в Пятницу 16:00
+		daysToSubtract := 1
+		sendDay := eventStart.AddDate(0, 0, -daysToSubtract)
+		scheduledAt = time.Date(sendDay.Year(), sendDay.Month(), sendDay.Day(), 16, 0, 0, 0, loc)
+
+	default:
+		// Вторник-Пятница → отправка в предыдущий день 16:00
+		daysToSubtract := 1
+		sendDay := eventStart.AddDate(0, 0, -daysToSubtract)
+		scheduledAt = time.Date(sendDay.Year(), sendDay.Month(), sendDay.Day(), 16, 0, 0, 0, loc)
 	}
 
-	// Calculate send day
-	sendDay := st.Add(-timeBeforeEvent)
-
-	// Determine send time based on send day
-	sendDow := sendDay.Weekday()
-	var sendHour int
-	if sendDow >= time.Monday && sendDow <= time.Friday {
-		sendHour = 16 // Weekdays 16:00
-	} else {
-		sendHour = 12 // Weekends 12:00
-	}
-
-	// Return the send time
-	return time.Date(sendDay.Year(), sendDay.Month(), sendDay.Day(), sendHour, 0, 0, 0, loc)
+	return scheduledAt
 }

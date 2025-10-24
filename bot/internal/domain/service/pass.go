@@ -95,9 +95,9 @@ func NewPassService(
 		Name:            "weekend",
 		EmailRecipients: passEmails,
 		TelegramChatID:  telegramChatID,
-		TimeBeforeEvent: 48 * time.Hour,
+		TimeBeforeEvent: 60 * time.Hour, // 60 часов для охвата событий на понедельник
 		IsActive:        true,
-		CronSchedule:    "0 12 * * 6,0",
+		CronSchedule:    "0 12 * * 6",
 	}
 	ps.configs["weekend"] = weekendConfig
 
