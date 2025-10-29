@@ -32,7 +32,6 @@ type PassConfig struct {
 	Name            string
 	EmailRecipients []string
 	TelegramChatID  int64
-	TimeBeforeEvent time.Duration
 	IsActive        bool
 	CronSchedule    string
 }
@@ -85,7 +84,6 @@ func NewPassService(
 		Name:            "weekday",
 		EmailRecipients: passEmails,
 		TelegramChatID:  telegramChatID,
-		TimeBeforeEvent: 24 * time.Hour,
 		IsActive:        true,
 		CronSchedule:    "0 16 * * 1-5",
 	}
@@ -95,7 +93,6 @@ func NewPassService(
 		Name:            "weekend",
 		EmailRecipients: passEmails,
 		TelegramChatID:  telegramChatID,
-		TimeBeforeEvent: 60 * time.Hour, // 60 часов для охвата событий на понедельник
 		IsActive:        true,
 		CronSchedule:    "0 12 * * 6",
 	}
@@ -105,7 +102,6 @@ func NewPassService(
 	//	Name:            "test",
 	//	EmailRecipients: passEmails,
 	//	TelegramChatID:  telegramChatID,
-	//	TimeBeforeEvent: 1 * time.Hour,
 	//	IsActive:        true,
 	//	CronSchedule:    "* * * * *",
 	//}
@@ -257,16 +253,25 @@ func (s *PassService) processPendingPasses(ctx context.Context, configName strin
 		return
 	}
 
-	cutoffTime := time.Now().Add(config.TimeBeforeEvent)
-	s.logger.Debugf("Looking for pending passes before: %s", cutoffTime.Format("2006-01-02 15:04:05"))
+	now := time.Now().In(location.Location())
 
-	pendingPasses, err := s.passRepo.GetPendingPassesForSchedule(ctx, cutoffTime)
+	s.logger.Debugf("=== Pass Scheduler ===")
+	s.logger.Debugf("Current time (local): %s", now.Format("2006-01-02 15:04:05"))
+	s.logger.Debugf("Looking for pending passes with scheduled_at <= %s", now.Format("2006-01-02 15:04:05"))
+
+	pendingPasses, err := s.passRepo.GetPendingPassesForSchedule(ctx, now)
 	if err != nil {
 		s.logger.Error("Failed to get pending passes", "error", err)
 		return
 	}
 
 	s.logger.Debugf("Found %d pending passes", len(pendingPasses))
+
+	// Log each pass details for diagnosis
+	for i, pass := range pendingPasses {
+		s.logger.Debugf("Pass #%d: ID=%s, EventID=%s, UserID=%d, ScheduledAt=%s",
+			i+1, pass.ID, pass.EventID, pass.UserID, pass.ScheduledAt.In(location.Location()).Format("2006-01-02 15:04:05"))
+	}
 
 	var eventsWithPasses []EventWithPasses
 	if len(pendingPasses) > 0 {
