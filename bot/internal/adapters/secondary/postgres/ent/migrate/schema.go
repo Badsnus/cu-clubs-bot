@@ -31,17 +31,17 @@ var (
 		PrimaryKey: []*schema.Column{ClubsColumns[0]},
 		Indexes: []*schema.Index{
 			{
-				Name:    "club_visible_in_tour",
-				Unique:  false,
-				Columns: []*schema.Column{ClubsColumns[9]},
-			},
-			{
 				Name:    "club_deleted_at",
 				Unique:  false,
 				Columns: []*schema.Column{ClubsColumns[1]},
 				Annotation: &entsql.IndexAnnotation{
 					Where: "deleted_at IS NULL",
 				},
+			},
+			{
+				Name:    "club_visible_in_tour",
+				Unique:  false,
+				Columns: []*schema.Column{ClubsColumns[9]},
 			},
 			{
 				Name:    "club_allowed_roles",
@@ -83,6 +83,14 @@ var (
 			},
 		},
 		Indexes: []*schema.Index{
+			{
+				Name:    "clubowner_deleted_at",
+				Unique:  false,
+				Columns: []*schema.Column{ClubOwnersColumns[1]},
+				Annotation: &entsql.IndexAnnotation{
+					Where: "deleted_at IS NULL",
+				},
+			},
 			{
 				Name:    "clubowner_user_id_club_id",
 				Unique:  true,
@@ -126,6 +134,14 @@ var (
 		},
 		Indexes: []*schema.Index{
 			{
+				Name:    "event_deleted_at",
+				Unique:  false,
+				Columns: []*schema.Column{EventsColumns[1]},
+				Annotation: &entsql.IndexAnnotation{
+					Where: "deleted_at IS NULL",
+				},
+			},
+			{
 				Name:    "event_qr_payload",
 				Unique:  true,
 				Columns: []*schema.Column{EventsColumns[13]},
@@ -141,14 +157,6 @@ var (
 				Columns: []*schema.Column{EventsColumns[15]},
 				Annotation: &entsql.IndexAnnotation{
 					Type: "GIN",
-				},
-			},
-			{
-				Name:    "event_deleted_at",
-				Unique:  false,
-				Columns: []*schema.Column{EventsColumns[1]},
-				Annotation: &entsql.IndexAnnotation{
-					Where: "deleted_at IS NULL",
 				},
 			},
 			{
@@ -190,6 +198,14 @@ var (
 		},
 		Indexes: []*schema.Index{
 			{
+				Name:    "eventparticipant_deleted_at",
+				Unique:  false,
+				Columns: []*schema.Column{EventParticipantsColumns[1]},
+				Annotation: &entsql.IndexAnnotation{
+					Where: "deleted_at IS NULL",
+				},
+			},
+			{
 				Name:    "eventparticipant_user_id_event_id",
 				Unique:  true,
 				Columns: []*schema.Column{EventParticipantsColumns[7], EventParticipantsColumns[6]},
@@ -225,6 +241,14 @@ var (
 			},
 		},
 		Indexes: []*schema.Index{
+			{
+				Name:    "ignoremailing_deleted_at",
+				Unique:  false,
+				Columns: []*schema.Column{IgnoreMailingsColumns[1]},
+				Annotation: &entsql.IndexAnnotation{
+					Where: "deleted_at IS NULL",
+				},
+			},
 			{
 				Name:    "ignoremailing_user_id_club_id",
 				Unique:  true,
@@ -262,6 +286,14 @@ var (
 			},
 		},
 		Indexes: []*schema.Index{
+			{
+				Name:    "notification_deleted_at",
+				Unique:  false,
+				Columns: []*schema.Column{NotificationsColumns[1]},
+				Annotation: &entsql.IndexAnnotation{
+					Where: "deleted_at IS NULL",
+				},
+			},
 			{
 				Name:    "notification_user_id_event_id",
 				Unique:  true,
